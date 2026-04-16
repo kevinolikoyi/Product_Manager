@@ -1,20 +1,34 @@
-# TODO - CollabFlow V2 CRUD Implementation (Admin - Français)
+c# CollabFlow V2 - Le Responsable Features (Dashboard + Kanban + Reports)
 
-## 1. ✅ Créer la gestion d'état (store.ts)
+## Plan Breakdown (Approved)
 
-## 2. ✅ Créer les composants UI
-- Modal.tsx
-- TaskForm.tsx  
-- ProjectForm.tsx
-- Button.tsx, Input.tsx, Select.tsx
-- Toast.tsx
+**1. Extend Data Models & Store** ✅
+   - [x] Add mockFinances.ts
+   - [x] Update mockTasks.ts (add assignee)
+   - [x] Update store.tsx (finances slice, assignee in Task)
 
-## 3. ☐ Mettre à jour les utilitaires (utils.ts)
+**2. Enhance Dashboard** ✅
+   - [x] Update KPI.tsx (add trend)
+   - [x] Update dashboard/page.tsx (financial KPIs, critical alerts/"courriers", quick actions buttons)
 
-## 4. ✅ Mettre à jour Tasks (TaskTable + page.tsx)
+**3. Kanban Board** ✅
+   - [x] Install @dnd-kit deps
+   - [x] Create KanbanBoard.tsx
+   - [x] Update tasks/page.tsx (toggle table/kanban)
 
-## 5. ✅ Mettre à jour Projects (ProjectCard + page.tsx)
+**4. Report Generation**
+   - [ ] Install jsPDF, html2canvas
+   - [ ] Create ReportGenerator.tsx
+   - [ ] Add to dashboard
 
-## 6. ✅ Mettre à jour Dashboard
+**5. Notifications & Assignee**
+   - [ ] Update TaskForm.tsx (assignee field)
+   - [ ] Update TaskTable.tsx (show assignee)
+   - [ ] Extend Toast for notifications
 
-## 7. ☐ Tester la fonctionnalité complète
+**6. Testing & Polish**
+   - [ ] Run npm run dev, test all features
+   - [ ] Update existing TODO progress
+
+Progress tracked here. Each step checked on completion.
+

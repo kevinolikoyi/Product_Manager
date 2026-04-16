@@ -2,6 +2,7 @@ export interface Task {
     id: string;
     title: string;
     project: string;
+    assignee?: string;
     status: 'todo' | 'in_progress' | 'done';
     priority: 'low' | 'medium' | 'high';
     risk: 'low' | 'medium' | 'high';
@@ -13,6 +14,7 @@ export const mockTasks: Task[] = [
         id: '1',
         title: 'Design user authentication flow',
         project: 'User Onboarding',
+        assignee: 'Alice Martin',
         status: 'in_progress',
         priority: 'high',
         risk: 'medium',
@@ -22,6 +24,7 @@ export const mockTasks: Task[] = [
         id: '2',
         title: 'Implement API endpoints',
         project: 'Backend Development',
+        assignee: 'Bob Dupont',
         status: 'todo',
         priority: 'high',
         risk: 'high',

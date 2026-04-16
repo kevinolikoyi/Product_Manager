@@ -5,14 +5,30 @@ import KPI from '@/components/dashboard/KPI';
 import AlertCard from '@/components/dashboard/AlertCard';
 import { useTasks } from '@/lib/store';
 import { useProjects } from '@/lib/store';
+import { useFinances } from '@/lib/store';
 import { Task } from '@/data/mockTasks';
+import { Finance } from '@/data/mockFinances';
+import ReportGenerator from '@/components/dashboard/ReportGenerator';
+import FinanceForm from '@/components/dashboard/FinanceForm';
+import { useState } from 'react';
+
 
 export default function DashboardPage() {
+  const [showFinanceForm, setShowFinanceForm] = useState(false);
+
   const tasksHook = useTasks();
   const projectsHook = useProjects();
+  const financesHook = useFinances();
   const tasks = tasksHook.tasks;
   const projects = projectsHook.projects;
+  const finances = financesHook.finances;
   const today = new Date().toISOString().split('T')[0];
+
+  const latestFinance = finances[finances.length - 1];
+  const prevFinance = finances[finances.length - 2];
+  const revenueTrend = prevFinance ? ((latestFinance.revenue - prevFinance.revenue) / prevFinance.revenue * 100).toFixed(1) : 0;
+  const expensesTrend = prevFinance ? ((latestFinance.expenses - prevFinance.expenses) / prevFinance.expenses * 100).toFixed(1) : 0;
+  const profitTrend = prevFinance ? ((latestFinance.profit - prevFinance.profit) / prevFinance.profit * 100).toFixed(1) : 0;
 
   const overdueTasks = tasks.filter(task => task.dueDate < today && task.status !== 'done');
   const blockedTasks = tasks.filter(task => task.risk === 'high' && task.status === 'in_progress');
@@ -40,12 +56,40 @@ export default function DashboardPage() {
       <div className="space-y-6">
         <h1 className="text-3xl font-bold text-gray-900">Tableau de bord</h1>
 
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+          <KPI title="Chiffre d'affaires" value={`€${latestFinance.revenue.toLocaleString()}`} color="green" trend={Number(revenueTrend)} />
+          <KPI title="Dépenses" value={`€${latestFinance.expenses.toLocaleString()}`} color="red" trend={Number(expensesTrend)} />
+          <KPI title="Profit" value={`€${latestFinance.profit.toLocaleString()}`} color="green" trend={Number(profitTrend)} />
           <KPI title="Tâches en retard" value={overdueTasks.length} />
           <KPI title="Tâches bloquées" value={blockedTasks.length} />
-          <KPI title="Tâches à faire aujourd'hui" value={tasksDueToday.length} />
           <KPI title="Projets actifs" value={activeProjects.length} />
         </div>
+
+        <div className="lg:grid-cols-3 grid gap-6 mt-6">
+          <div className="bg-white p-6 rounded-lg shadow">
+            <h3 className="text-lg font-semibold mb-2">Instructions rapides</h3>
+            <button className="bg-blue-600 text-white px-4 py-2 rounded mr-2 hover:bg-blue-700 text-sm">
+              Assigner toutes tâches en retard
+            </button>
+            <ReportGenerator />
+          </div>
+          <div className="bg-white p-6 rounded-lg shadow">
+            <h3 className="text-lg font-semibold mb-2">Finances Mai 2024</h3>
+            <button 
+              onClick={() => setShowFinanceForm(true)}
+              className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 text-sm mb-2 w-full"
+            >
+              ➕ Saisir CA/Dépenses
+            </button>
+            {showFinanceForm && (
+              <FinanceForm 
+                month="Mai 2024" 
+                onClose={() => setShowFinanceForm(false)} 
+              />
+            )}
+          </div>
+        </div>
+
 
         <div className="space-y-4">
           <h2 className="text-xl font-semibold text-gray-900">Alertes</h2>
@@ -61,6 +105,13 @@ export default function DashboardPage() {
               title="Tâches bloquées"
               description={`Vous avez ${blockedTasks.length} tâche(s) bloquée(s).`}
               type="warning"
+            />
+          )}
+          {criticalTasks.length > 0 && (
+            <AlertCard
+              title="Courriers critiques / Tâches urgentes"
+              description={`Priorité haute sur ${criticalTasks.length} tâches en retard. Action immédiate requise.`}
+              type="error"
             />
           )}
         </div>

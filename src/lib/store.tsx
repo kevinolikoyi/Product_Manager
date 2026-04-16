@@ -3,10 +3,12 @@
 import { createContext, useContext, useReducer, type ReactNode } from 'react';
 import { mockTasks, type Task } from '@/data/mockTasks';
 import { mockProjects, type Project } from '@/data/mockProjects';
+import { mockFinances, type Finance } from '@/data/mockFinances';
 
 export interface StoreState {
     tasks: Task[];
     projects: Project[];
+    finances: Finance[];
 }
 
 type AddTask = { type: 'ADD_TASK'; payload: Task };
@@ -15,8 +17,9 @@ type DeleteTask = { type: 'DELETE_TASK'; payload: string };
 type AddProject = { type: 'ADD_PROJECT'; payload: Project };
 type UpdateProject = { type: 'UPDATE_PROJECT'; payload: Project };
 type DeleteProject = { type: 'DELETE_PROJECT'; payload: string };
+type UpdateFinances = { type: 'UPDATE_FINANCES'; payload: Finance[] };
 
-type Action = AddTask | UpdateTask | DeleteTask | AddProject | UpdateProject | DeleteProject;
+type Action = AddTask | UpdateTask | DeleteTask | AddProject | UpdateProject | DeleteProject | UpdateFinances;
 
 const storeReducer = (state: StoreState, action: Action): StoreState => {
     switch (action.type) {
@@ -44,6 +47,11 @@ const storeReducer = (state: StoreState, action: Action): StoreState => {
                 ...state,
                 projects: state.projects.filter((p) => p.id !== action.payload),
             };
+        case 'UPDATE_FINANCES':
+            return {
+                ...state,
+                finances: action.payload,
+            };
         default:
             return state;
     }
@@ -52,6 +60,7 @@ const storeReducer = (state: StoreState, action: Action): StoreState => {
 const initialState: StoreState = {
     tasks: mockTasks,
     projects: mockProjects,
+    finances: mockFinances,
 };
 
 const StoreContext = createContext<{
@@ -82,5 +91,10 @@ export const useTasks = () => {
 export const useProjects = () => {
     const { state, dispatch } = useStore();
     return { projects: state.projects, dispatch };
+};
+
+export const useFinances = () => {
+    const { state, dispatch } = useStore();
+    return { finances: state.finances, dispatch };
 };
 

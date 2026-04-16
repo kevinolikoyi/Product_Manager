@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Layout from '@/components/layout/Layout';
 import TaskTable from '@/components/tasks/TaskTable';
+import KanbanBoard from '@/components/tasks/KanbanBoard';
 import TaskForm from '@/components/forms/TaskForm';
 import Modal from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
@@ -13,6 +14,7 @@ type Filter = 'all' | 'overdue' | 'today' | 'high_priority';
 
 export default function TasksPage() {
   const [filter, setFilter] = useState<Filter>('all');
+  const [view, setView] = useState<'table' | 'kanban'>('table');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
 
@@ -113,12 +115,29 @@ export default function TasksPage() {
               Priorité haute
             </button>
           </div>
+          <div className="flex space-x-2">
+            <Button 
+              onClick={() => setView('table')} 
+              variant="outline"
+              className={view === 'table' ? 'border-blue-600 text-blue-600' : ''}
+            >
+              Tableau
+            </Button>
+            <Button 
+              onClick={() => setView('kanban')} 
+              variant="outline"
+              className={view === 'kanban' ? 'border-blue-600 text-blue-600' : ''}
+            >
+              Kanban
+            </Button>
+          </div>
           <Button onClick={handleAddTask} className="w-full sm:w-auto">
             ➕ Ajouter une tâche
           </Button>
         </div>
 
-        <TaskTable tasks={filteredTasks} onEdit={handleEdit} onDelete={handleDelete} />
+        <KanbanBoard />
+
 
         <Modal isOpen={isModalOpen} onClose={handleCloseModal} title={editingTask ? 'Modifier la tâche' : 'Ajouter une tâche'}>
           <TaskForm task={editingTask} onClose={handleCloseModal} onSuccess={handleTaskSuccess} />

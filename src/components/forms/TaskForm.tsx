@@ -22,6 +22,7 @@ export default function TaskForm({ task, onClose, onSuccess }: TaskFormProps) {
   const [formData, setFormData] = useState({
     title: task?.title || '',
     project: task?.project || '',
+    assignee: task?.assignee || '',
     status: task?.status || 'todo',
     priority: task?.priority || 'medium',
     risk: task?.risk || 'medium',
@@ -88,6 +89,15 @@ export default function TaskForm({ task, onClose, onSuccess }: TaskFormProps) {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Assigné à</label>
+          <Input
+            value={formData.assignee}
+            onChange={(e) => setFormData({ ...formData, assignee: e.target.value })}
+            className="w-full"
+            placeholder="Nom du collaborateur (optionnel)"
+          />
+        </div>
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">Statut</label>
           <SelectField

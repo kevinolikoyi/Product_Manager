@@ -79,7 +79,7 @@ export default function DashboardPage() {
               onClick={() => setShowFinanceForm(true)}
               className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 text-sm mb-2 w-full"
             >
-              ➕ Saisir CA/Dépenses
+              + Saisir CA/Dépenses
             </button>
             {showFinanceForm && (
               <FinanceForm 

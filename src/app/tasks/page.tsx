@@ -115,24 +115,9 @@ export default function TasksPage() {
               Priorité haute
             </button>
           </div>
-          <div className="flex space-x-2">
-            <Button 
-              onClick={() => setView('table')} 
-              variant="outline"
-              className={view === 'table' ? 'border-blue-600 text-blue-600' : ''}
-            >
-              Tableau
-            </Button>
-            <Button 
-              onClick={() => setView('kanban')} 
-              variant="outline"
-              className={view === 'kanban' ? 'border-blue-600 text-blue-600' : ''}
-            >
-              Kanban
-            </Button>
-          </div>
+          
           <Button onClick={handleAddTask} className="w-full sm:w-auto">
-            ➕ Ajouter une tâche
+            + Ajouter une tâche
           </Button>
         </div>
 

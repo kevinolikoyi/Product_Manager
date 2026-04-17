@@ -47,7 +47,7 @@ export default function ProjectsPage() {
         <div className="flex justify-between items-center">
           <h1 className="text-3xl font-bold text-gray-900">Projets</h1>
           <Button onClick={handleAddProject}>
-            ➕ Ajouter un projet
+            + Ajouter un projet
           </Button>
         </div>
 

@@ -134,10 +134,8 @@ export default function KanbanBoard() {
     <div className="p-8 max-w-7xl mx-auto">
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h2 className="text-3xl font-bold text-gray-900 mb-1">Kanban - Vue Trello</h2>
-          <p className="text-gray-600">Drag & drop tâches entre colonnes</p>
+          <h2 className="text-3xl font-bold text-gray-900 mb-1">Kanban</h2>
         </div>
-        <Button>+ Nouvelle tâche</Button>
       </div>
       
       <DndContext 

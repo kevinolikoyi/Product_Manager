@@ -1,133 +1,108 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import Layout from '@/components/layout/Layout';
-import TaskTable from '@/components/tasks/TaskTable';
-import KanbanBoard from '@/components/tasks/KanbanBoard';
-import TaskForm from '@/components/forms/TaskForm';
-import Modal from '@/components/ui/Modal';
-import { Button } from '@/components/ui/Button';
-import { useTasks } from '@/lib/store';
-import { Task } from '@/data/mockTasks';
+import { faker } from "@faker-js/faker";
+import {
+  KanbanBoard,
+  KanbanCard,
+  KanbanCards,
+  KanbanHeader,
+  KanbanProvider,
+} from "@/components/kibo-ui/kanban";
+import { useState } from "react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
-type Filter = 'all' | 'overdue' | 'today' | 'high_priority';
+const capitalize = (str: string) => str.charAt(0).toUpperCase() + str.slice(1);
 
-export default function TasksPage() {
-  const [filter, setFilter] = useState<Filter>('all');
-  const [view, setView] = useState<'table' | 'kanban'>('table');
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingTask, setEditingTask] = useState<Task | null>(null);
+const columns = [
+  { id: faker.string.uuid(), name: "Planned", color: "#6B7280" },
+  { id: faker.string.uuid(), name: "In Progress", color: "#F59E0B" },
+  { id: faker.string.uuid(), name: "Done", color: "#10B981" },
+];
 
-  const tasksHook = useTasks();
+const users = Array.from({ length: 4 })
+  .fill(null)
+  .map(() => ({
+    id: faker.string.uuid(),
+    name: faker.person.fullName(),
+    image: faker.image.avatar(),
+  }));
 
-  const today = new Date().toISOString().split('T')[0];
+const exampleFeatures = Array.from({ length: 20 })
+  .fill(null)
+  .map(() => ({
+    id: faker.string.uuid(),
+    name: capitalize(faker.company.buzzPhrase()),
+    startAt: faker.date.past({ years: 0.5, refDate: new Date() }),
+    endAt: faker.date.future({ years: 0.5, refDate: new Date() }),
+    column: faker.helpers.arrayElement(columns).id,
+    owner: faker.helpers.arrayElement(users),
+  }));
 
-// Note: mockTasks replaced by store.tasks in filteredTasks
-  const filteredTasks = tasksHook.tasks.filter((task) => {
-    switch (filter) {
-      case 'overdue':
-        return task.dueDate < today && task.status !== 'done';
-      case 'today':
-        return task.dueDate === today;
-      case 'high_priority':
-        return task.priority === 'high';
-      default:
-        return true;
-    }
-  });
+const dateFormatter = new Intl.DateTimeFormat("en-US", {
+  month: "short",
+  day: "numeric",
+  year: "numeric",
+});
 
-  const handleEdit = (task: Task) => {
-    setEditingTask(task);
-    setIsModalOpen(true);
-  };
+const shortDateFormatter = new Intl.DateTimeFormat("en-US", {
+  month: "short",
+  day: "numeric",
+});
 
-  const handleDelete = (id: string) => {
-    if (confirm('Voulez-vous vraiment supprimer cette tâche ?')) {
-      tasksHook.dispatch({ type: 'DELETE_TASK', payload: id });
-    }
-  };
-
-  const handleAddTask = () => {
-    setEditingTask(null);
-    setIsModalOpen(true);
-  };
-
-  const handleCloseModal = () => {
-    setIsModalOpen(false);
-    setEditingTask(null);
-  };
-
-  const handleTaskSuccess = () => {
-    setIsModalOpen(false);
-    setEditingTask(null);
-    alert(editingTask ? 'Tâche modifiée avec succès !' : 'Tâche créée avec succès !');
-  };
+const Example = () => {
+  const [features, setFeatures] = useState(exampleFeatures);
 
   return (
-    <Layout>
-      <div className="space-y-6">
-        <h1 className="text-3xl font-bold text-gray-900">Tâches</h1>
-
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">
-          <div className="flex space-x-4">
-            <button
-              key="all"
-              onClick={() => setFilter('all')}
-              className={`rounded-md px-4 py-2 text-sm font-medium ${
-                filter === 'all'
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300'
-              }`}
-            >
-              Toutes
-            </button>
-            <button
-              key="overdue"
-              onClick={() => setFilter('overdue')}
-              className={`rounded-md px-4 py-2 text-sm font-medium ${
-                filter === 'overdue'
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300'
-              }`}
-            >
-              En retard
-            </button>
-            <button
-              key="today"
-              onClick={() => setFilter('today')}
-              className={`rounded-md px-4 py-2 text-sm font-medium ${
-                filter === 'today'
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300'
-              }`}
-            >
-              Pour aujourd'hui
-            </button>
-            <button
-              key="high_priority"
-              onClick={() => setFilter('high_priority')}
-              className={`rounded-md px-4 py-2 text-sm font-medium ${
-                filter === 'high_priority'
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300'
-              }`}
-            >
-              Priorité haute
-            </button>
-          </div>
-          
-          <Button onClick={handleAddTask} className="w-full sm:w-auto">
-            + Ajouter une tâche
-          </Button>
-        </div>
-
-        <KanbanBoard />
-
-
-        <Modal isOpen={isModalOpen} onClose={handleCloseModal} title={editingTask ? 'Modifier la tâche' : 'Ajouter une tâche'}>
-          <TaskForm task={editingTask} onClose={handleCloseModal} onSuccess={handleTaskSuccess} />
-        </Modal>
-      </div>
-    </Layout>
+    <KanbanProvider
+      columns={columns}
+      data={features}
+      onDataChange={setFeatures}
+    >
+      {(column) => (
+        <KanbanBoard id={column.id} key={column.id}>
+          <KanbanHeader>
+            <div className="flex items-center gap-2">
+              <div
+                className="h-2 w-2 rounded-full"
+                style={{ backgroundColor: column.color }}
+              />
+              <span>{column.name}</span>
+            </div>
+          </KanbanHeader>
+          <KanbanCards id={column.id}>
+            {(feature: (typeof features)[number]) => (
+              <KanbanCard
+                column={column.id}
+                id={feature.id}
+                key={feature.id}
+                name={feature.name}
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex flex-col gap-1">
+                    <p className="m-0 flex-1 font-medium text-sm">
+                      {feature.name}
+                    </p>
+                  </div>
+                  {feature.owner && (
+                    <Avatar className="h-4 w-4 shrink-0">
+                      <AvatarImage src={feature.owner.image} />
+                      <AvatarFallback>
+                        {feature.owner.name?.slice(0, 2)}
+                      </AvatarFallback>
+                    </Avatar>
+                  )}
+                </div>
+                <p className="m-0 text-muted-foreground text-xs">
+                  {shortDateFormatter.format(feature.startAt)} -{" "}
+                  {dateFormatter.format(feature.endAt)}
+                </p>
+              </KanbanCard>
+            )}
+          </KanbanCards>
+        </KanbanBoard>
+      )}
+    </KanbanProvider>
   );
-}
+};
+
+export default Example;

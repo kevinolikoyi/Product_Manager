@@ -42,7 +42,7 @@ export default function FinanceForm({ onClose, month }: FinanceFormProps) {
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="mb-1 block text-sm font-medium text-gray-700">
-              Chiffre d&apos;affaires (EUR)
+              Chiffre d&apos;affaires (FCFA)
             </label>
             <Input
               type="number"
@@ -55,7 +55,7 @@ export default function FinanceForm({ onClose, month }: FinanceFormProps) {
 
           <div>
             <label className="mb-1 block text-sm font-medium text-gray-700">
-              Depenses (EUR)
+              Depenses (FCFA)
             </label>
             <Input
               type="number"

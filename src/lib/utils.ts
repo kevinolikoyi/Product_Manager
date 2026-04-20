@@ -42,11 +42,17 @@ const fullDateFormatter = new Intl.DateTimeFormat("fr-FR", {
   year: "numeric",
 });
 
-const compactCurrencyFormatter = new Intl.NumberFormat("fr-FR", {
+const compactCurrencyFormatter = new Intl.NumberFormat("fr-SN", {
   style: "currency",
-  currency: "EUR",
+  currency: "XOF",
   notation: "compact",
   maximumFractionDigits: 1,
+});
+
+const standardCurrencyFormatter = new Intl.NumberFormat("fr-SN", {
+  style: "currency",
+  currency: "XOF",
+  maximumFractionDigits: 0,
 });
 
 export function getTodayIsoDate() {
@@ -63,6 +69,10 @@ export function formatFullDate(date: string) {
 
 export function formatCompactCurrency(value: number) {
   return compactCurrencyFormatter.format(value);
+}
+
+export function formatCurrency(value: number) {
+  return standardCurrencyFormatter.format(value);
 }
 
 export function isTaskOverdue(task: Task, today = getTodayIsoDate()) {

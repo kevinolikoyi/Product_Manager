@@ -9,7 +9,7 @@ import ProjectCard from '@/components/projects/ProjectCard';
 import Modal from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import { type Project } from '@/data/mockProjects';
-import { useProjects, useTasks } from '@/lib/store';
+import { useProjects, useTasks, useWorkspacePreferences } from '@/lib/store';
 import {
   getProjectProgressTone,
   getTodayIsoDate,
@@ -35,6 +35,7 @@ export default function ProjectsPage() {
 
   const { projects, dispatch: projectDispatch } = useProjects();
   const { tasks, dispatch: taskDispatch } = useTasks();
+  const { preferences } = useWorkspacePreferences();
   const today = getTodayIsoDate();
 
   const portfolio = projects.map((project) => {
@@ -189,7 +190,14 @@ export default function ProjectsPage() {
           </div>
         </section>
 
-        <section className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
+        <section
+          className={cn(
+            'grid gap-6',
+            preferences.showInsights
+              ? 'xl:grid-cols-[minmax(0,1.2fr)_minmax(320px,0.8fr)]'
+              : 'grid-cols-1',
+          )}
+        >
           <div className="grid gap-5 md:grid-cols-2">
             {filteredPortfolio.map(({ project, openTasks, blockedTasks, overdueTasks }) => (
               <ProjectCard
@@ -204,7 +212,8 @@ export default function ProjectsPage() {
             ))}
           </div>
 
-          <div className="space-y-6">
+          {preferences.showInsights ? (
+            <div className="space-y-6">
             <article className="surface-card rounded-[30px] border border-white/60 p-5">
               <p className="text-sm font-semibold tracking-[-0.02em] text-slate-950">
                 Focus portefeuille
@@ -299,7 +308,8 @@ export default function ProjectsPage() {
                 })}
               </div>
             </article>
-          </div>
+            </div>
+          ) : null}
         </section>
 
         <Modal

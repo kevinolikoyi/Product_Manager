@@ -22,7 +22,7 @@ export default function Navbar({
 }: NavbarProps) {
   const pathname = usePathname();
   const fallback = pageMetadata[pathname] ?? {
-    title: "CollabFlow",
+    title: "AS WORLD TECH",
     description: "Workspace collaboratif et pilotage des operations.",
     eyebrow: "Workspace",
   };
@@ -63,12 +63,12 @@ export default function Navbar({
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2 lg:justify-end">
+        <div className="flex w-full flex-wrap items-center gap-2 lg:w-auto lg:justify-end">
           <div className="inline-flex items-center gap-2 rounded-full border border-slate-200/80 bg-white/80 px-3 py-2 text-xs font-medium text-slate-600 shadow-sm">
             <CalendarRange className="h-4 w-4 text-slate-400" />
             <span className="capitalize">{monthLabel}</span>
           </div>
-          <div className="inline-flex items-center gap-2 rounded-full border border-indigo-200/80 bg-indigo-50 px-3 py-2 text-xs font-semibold text-indigo-700 shadow-sm">
+          <div className="hidden items-center gap-2 rounded-full border border-indigo-200/80 bg-indigo-50 px-3 py-2 text-xs font-semibold text-indigo-700 shadow-sm sm:inline-flex">
             <Sparkles className="h-4 w-4" />
             <span>Focus executive</span>
           </div>

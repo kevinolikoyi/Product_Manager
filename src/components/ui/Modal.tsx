@@ -1,6 +1,7 @@
 'use client';
 
-import { ReactNode, useEffect } from 'react';
+import { ReactNode, useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 
 interface ModalProps {
@@ -11,6 +12,16 @@ interface ModalProps {
 }
 
 export default function Modal({ isOpen, onClose, title, children }: ModalProps) {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+
+    return () => {
+      setMounted(false);
+    };
+  }, []);
+
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = 'hidden';
@@ -22,24 +33,24 @@ export default function Modal({ isOpen, onClose, title, children }: ModalProps) 
     };
   }, [isOpen]);
 
-  if (!isOpen) return null;
+  if (!mounted || !isOpen) return null;
 
-  return (
+  return createPortal(
     <div
       className="fixed inset-0 z-50 overflow-y-auto"
       aria-labelledby="modal-title"
       role="dialog"
       aria-modal="true"
     >
-      <div className="flex min-h-full items-center justify-center p-4">
+      <div className="flex min-h-full items-end justify-center p-3 sm:items-center sm:p-4">
         <div
           className="fixed inset-0 bg-slate-950/45 backdrop-blur-sm transition-opacity"
           aria-hidden="true"
           onClick={onClose}
         />
 
-        <div className="surface-card relative z-10 w-full max-w-xl overflow-hidden rounded-[30px] border border-white/60 text-left shadow-[0_28px_70px_rgba(15,23,42,0.22)]">
-          <div className="flex items-center justify-between border-b border-slate-200/70 px-5 py-4 sm:px-6">
+        <div className="surface-card relative z-10 max-h-[calc(100vh-1.5rem)] w-full max-w-xl overflow-hidden rounded-[30px] border border-white/60 text-left shadow-[0_28px_70px_rgba(15,23,42,0.22)]">
+          <div className="flex items-start justify-between gap-3 border-b border-slate-200/70 px-4 py-4 sm:px-6">
             <div>
               <h3
                 id="modal-title"
@@ -60,9 +71,12 @@ export default function Modal({ isOpen, onClose, title, children }: ModalProps) 
               <X className="h-4 w-4" />
             </button>
           </div>
-          <div className="px-5 py-5 sm:px-6">{children}</div>
+          <div className="max-h-[calc(100vh-9rem)] overflow-y-auto px-4 py-5 sm:px-6">
+            {children}
+          </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

@@ -41,7 +41,7 @@ export const navigationItems: NavigationItem[] = [
   },
   {
     label: "Configuration",
-    href: "/dashboard",
+    href: "/settings",
     icon: Settings2,
     section: "settings",
   },
@@ -70,5 +70,10 @@ export const pageMetadata: Record<
     title: "Finances",
     description: "Lecture rapide des revenus, depenses et marge operationnelle.",
     eyebrow: "Performance",
+  },
+  "/settings": {
+    title: "Configuration",
+    description: "Preferences d'affichage, densite et comportement de l'interface.",
+    eyebrow: "Workspace",
   },
 };

@@ -69,7 +69,7 @@ export default function ProjectCard({
         </div>
       </div>
 
-      <div className="mt-6 grid grid-cols-3 gap-3">
+      <div className="mt-6 grid gap-3 sm:grid-cols-3">
         <div className="rounded-[20px] bg-white/75 px-4 py-3">
           <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">
             Ouvertes
@@ -90,11 +90,11 @@ export default function ProjectCard({
         </div>
       </div>
 
-      <div className="mt-6 flex items-center justify-between gap-3 border-t border-slate-200/70 pt-4">
+      <div className="mt-6 flex flex-col gap-3 border-t border-slate-200/70 pt-4 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-sm text-slate-500">
           {project.numberOfTasks} taches planifiees
         </p>
-        <div className="flex items-center gap-2">
+        <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:justify-end">
           {onEdit ? (
             <Button
               variant="outline"

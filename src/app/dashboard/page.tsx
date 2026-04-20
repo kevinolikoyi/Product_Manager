@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import AlertCard from "@/components/dashboard/AlertCard";
 import KPI from "@/components/dashboard/KPI";
+import ReportGenerator from "@/components/dashboard/ReportGenerator";
 import Layout from "@/components/layout/Layout";
 import { useFinances, useProjects, useTasks } from "@/lib/store";
 import {
@@ -84,13 +85,7 @@ export default function DashboardPage() {
 
   const dashboardActions = (
     <>
-      <button
-        type="button"
-        className="inline-flex items-center gap-2 rounded-full border border-slate-200/80 bg-white/85 px-4 py-2 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-white"
-      >
-        <Clock3 className="h-4 w-4 text-slate-400" />
-        Rapport PDF
-      </button>
+      <ReportGenerator />
       <button
         type="button"
         className="inline-flex items-center gap-2 rounded-full bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-[0_12px_28px_rgba(79,70,229,0.28)] transition hover:bg-indigo-500"

@@ -9,7 +9,7 @@ import TaskTable from "@/components/tasks/TaskTable";
 import Modal from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
 import type { Task } from "@/data/mockTasks";
-import { useTasks } from "@/lib/store";
+import { useTasks, useWorkspacePreferences } from "@/lib/store";
 import {
   formatShortDate,
   getTaskPriorityScore,
@@ -33,6 +33,7 @@ const filterLabels: Record<Filter, string> = {
 
 export default function TasksPage() {
   const { tasks, dispatch } = useTasks();
+  const { preferences } = useWorkspacePreferences();
   const [filter, setFilter] = useState<Filter>("all");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
@@ -186,9 +187,16 @@ export default function TasksPage() {
           </div>
         </section>
 
-        <section className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
+        <section
+          className={cn(
+            "grid gap-6",
+            preferences.showInsights
+              ? "xl:grid-cols-[minmax(0,1.2fr)_minmax(320px,0.8fr)]"
+              : "grid-cols-1",
+          )}
+        >
           <article className="surface-card overflow-hidden rounded-[30px] border border-white/60">
-            <div className="flex items-center justify-between border-b border-slate-200/70 px-5 py-4">
+            <div className="flex flex-col gap-3 border-b border-slate-200/70 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <p className="text-sm font-semibold tracking-[-0.02em] text-slate-950">
                   Vue tabulaire
@@ -208,7 +216,8 @@ export default function TasksPage() {
             />
           </article>
 
-          <div className="space-y-6">
+          {preferences.showInsights ? (
+            <div className="space-y-6">
             <article className="surface-card rounded-[30px] border border-white/60 p-5">
               <div className="flex items-center justify-between">
                 <div>
@@ -325,7 +334,8 @@ export default function TasksPage() {
                 })}
               </div>
             </article>
-          </div>
+            </div>
+          ) : null}
         </section>
 
         <Modal

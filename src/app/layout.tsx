@@ -3,8 +3,8 @@ import "./globals.css";
 import { StoreProvider } from "@/lib/store";
 
 export const metadata: Metadata = {
-  title: "CollabFlow V2 - AI Project Management System",
-  description: "Modern SaaS for project management",
+  title: "AS WORLD TECH - Project Management System",
+  description: "AS WORLD TECH - plateforme moderne de gestion de projets",
 };
 
 export default function RootLayout({

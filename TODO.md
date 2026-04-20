@@ -31,4 +31,3 @@ c# CollabFlow V2 - Le Responsable Features (Dashboard + Kanban + Reports)
    - [ ] Update existing TODO progress
 
 Progress tracked here. Each step checked on completion.
-

@@ -1,6 +1,7 @@
 'use client';
 
 import { ReactNode, useEffect } from 'react';
+import { X } from 'lucide-react';
 
 interface ModalProps {
   isOpen: boolean;
@@ -24,30 +25,42 @@ export default function Modal({ isOpen, onClose, title, children }: ModalProps) 
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
-      <div className="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
-        <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true" onClick={onClose} />
-        
-        <div className="relative transform overflow-hidden rounded-lg bg-white text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-lg">
-          <div className="bg-white px-4 pb-4 pt-5 sm:p-6 sm:pb-4">
-            <div className="sm:flex sm:items-start">
-              <div className="mt-3 text-center sm:ml-4 sm:mt-0 sm:text-left">
-                <h3 id="modal-title" className="text-base font-semibold leading-6 text-gray-900">
-                  {title}
-                </h3>
-                <div className="mt-2">{children}</div>
-              </div>
+    <div
+      className="fixed inset-0 z-50 overflow-y-auto"
+      aria-labelledby="modal-title"
+      role="dialog"
+      aria-modal="true"
+    >
+      <div className="flex min-h-full items-center justify-center p-4">
+        <div
+          className="fixed inset-0 bg-slate-950/45 backdrop-blur-sm transition-opacity"
+          aria-hidden="true"
+          onClick={onClose}
+        />
+
+        <div className="surface-card relative z-10 w-full max-w-xl overflow-hidden rounded-[30px] border border-white/60 text-left shadow-[0_28px_70px_rgba(15,23,42,0.22)]">
+          <div className="flex items-center justify-between border-b border-slate-200/70 px-5 py-4 sm:px-6">
+            <div>
+              <h3
+                id="modal-title"
+                className="text-lg font-semibold tracking-[-0.02em] text-slate-950"
+              >
+                {title}
+              </h3>
+              <p className="mt-1 text-sm text-slate-500">
+                Met a jour les informations portefeuille et la progression de livraison.
+              </p>
             </div>
-          </div>
-          <div className="bg-gray-50 px-4 py-3 sm:flex sm:flex-row-reverse sm:px-6">
             <button
               type="button"
-              className="inline-flex w-full justify-center rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 sm:ml-3 sm:w-auto"
               onClick={onClose}
+              className="grid h-10 w-10 place-items-center rounded-full border border-slate-200 bg-white text-slate-500 transition hover:bg-slate-50 hover:text-slate-800"
+              aria-label="Fermer"
             >
-              Fermer
+              <X className="h-4 w-4" />
             </button>
           </div>
+          <div className="px-5 py-5 sm:px-6">{children}</div>
         </div>
       </div>
     </div>

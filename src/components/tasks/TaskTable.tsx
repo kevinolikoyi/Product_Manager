@@ -1,100 +1,173 @@
-'use client';
+"use client";
 
-import { Task } from '@/data/mockTasks';
-import { Button } from '@/components/ui/Button';
+import type { Task } from "@/data/mockTasks";
+import { Button } from "@/components/ui/Button";
+import {
+  formatShortDate,
+  getTaskPriorityScore,
+  getTodayIsoDate,
+  isTaskOverdue,
+  priorityLabels,
+  riskLabels,
+  statusLabels,
+} from "@/lib/utils";
+import { cn } from "@/lib/utils";
 
 interface TaskTableProps {
   tasks: Task[];
-  onEdit: (task: Task) => void;
-  onDelete: (id: string) => void;
+  onEdit?: (task: Task) => void;
+  onDelete?: (id: string) => void;
 }
 
 export default function TaskTable({ tasks, onEdit, onDelete }: TaskTableProps) {
+  const today = getTodayIsoDate();
+
   return (
-    <div className="overflow-x-auto">
-      <table className="min-w-full divide-y divide-gray-200">
-        <thead className="bg-gray-50">
-          <tr>
-            <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
-              Titre
-            </th>
-            <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
-              Projet
-            </th>
-            <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
-              Statut
-            </th>
-            <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
-              Priorité
-            </th>
-            <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
-              Risque
-            </th>
-            <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
-              Date limite
-            </th>
-            <th className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">
-              Actions
-            </th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-gray-200 bg-white">
-          {tasks.map((task) => (
-            <tr key={task.id}>
-              <td className="whitespace-nowrap px-6 py-4 text-sm font-medium text-gray-900">
-                {task.title}
-              </td>
-              <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
-                {task.project}
-              </td>
-              <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
-                <span className={`inline-flex rounded-full px-2 text-xs font-semibold leading-5 ${
-                  task.status === 'done' ? 'bg-green-100 text-green-800' :
-                  task.status === 'in_progress' ? 'bg-blue-100 text-blue-800' :
-                  'bg-gray-100 text-gray-800'
-                }`}>
-                  {task.status === 'done' ? 'Terminée' : task.status === 'in_progress' ? 'En cours' : 'À faire'}
-                </span>
-              </td>
-              <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
-                <span className={`inline-flex rounded-full px-2 text-xs font-semibold leading-5 ${
-                  task.priority === 'high' ? 'bg-red-100 text-red-800' :
-                  task.priority === 'medium' ? 'bg-yellow-100 text-yellow-800' :
-                  'bg-green-100 text-green-800'
-                }`}>
-                  {task.priority === 'high' ? 'Haute' : task.priority === 'medium' ? 'Moyenne' : 'Basse'}
-                </span>
-              </td>
-              <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
-                <span className={`inline-flex rounded-full px-2 text-xs font-semibold leading-5 ${
-                  task.risk === 'high' ? 'bg-red-100 text-red-800' :
-                  task.risk === 'medium' ? 'bg-orange-100 text-orange-800' :
-                  'bg-green-100 text-green-800'
-                }`}>
-                  {task.risk === 'high' ? 'Élevé' : task.risk === 'medium' ? 'Moyen' : 'Faible'}
-                </span>
-              </td>
-              <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
-                {new Date(task.dueDate).toLocaleDateString()}
-              </td>
-              <td className="whitespace-nowrap px-6 py-4 text-sm font-medium">
-                <Button
-                  onClick={() => onEdit(task)}
-                  className="mr-1 text-xs px-2 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded"
-                >
-                  Modifier
-                </Button>
-                <Button
-                  onClick={() => onDelete(task.id)}
-                  className="text-xs px-2 py-1 bg-red-600 hover:bg-red-700 text-white rounded"
-                >
-                  Supprimer
-                </Button>
-              </td>
+    <div className="overflow-hidden rounded-[30px] border border-white/60">
+      <div className="overflow-x-auto">
+        <table className="min-w-full border-separate border-spacing-0">
+          <thead>
+            <tr className="bg-slate-50/90 text-left">
+              <th className="px-5 py-4 text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
+                Titre
+              </th>
+              <th className="px-4 py-4 text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
+                Projet
+              </th>
+              <th className="px-4 py-4 text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
+                Statut
+              </th>
+              <th className="px-4 py-4 text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
+                Priorite
+              </th>
+              <th className="px-4 py-4 text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
+                Risque
+              </th>
+              <th className="px-5 py-4 text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
+                Date limite
+              </th>
+              {onEdit || onDelete ? (
+                <th className="px-5 py-4 text-right text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
+                  Actions
+                </th>
+              ) : null}
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody className="bg-white/80">
+            {tasks.map((task) => {
+              const overdue = isTaskOverdue(task, today);
+              const score = getTaskPriorityScore(task, today);
+
+              return (
+                <tr key={task.id} className="transition hover:bg-slate-50/80">
+                  <td className="border-t border-slate-200/70 px-5 py-4 align-top">
+                    <div className="min-w-[260px]">
+                      <p className="text-sm font-semibold tracking-[-0.02em] text-slate-950">
+                        {task.title}
+                      </p>
+                      <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-slate-500">
+                        <span>{task.assignee ?? "Non assigne"}</span>
+                        <span className="rounded-full bg-slate-100 px-2 py-0.5 font-semibold text-slate-600">
+                          Score {score}
+                        </span>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="border-t border-slate-200/70 px-4 py-4 align-top text-sm text-slate-600">
+                    {task.project}
+                  </td>
+                  <td className="border-t border-slate-200/70 px-4 py-4 align-top">
+                    <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-semibold text-slate-700">
+                      {statusLabels[task.status]}
+                    </span>
+                  </td>
+                  <td className="border-t border-slate-200/70 px-4 py-4 align-top">
+                    <span
+                      className={cn(
+                        "rounded-full px-2.5 py-1 text-[11px] font-semibold",
+                        task.priority === "high"
+                          ? "bg-red-100 text-red-700"
+                          : task.priority === "medium"
+                            ? "bg-amber-100 text-amber-700"
+                            : "bg-emerald-100 text-emerald-700",
+                      )}
+                    >
+                      {priorityLabels[task.priority]}
+                    </span>
+                  </td>
+                  <td className="border-t border-slate-200/70 px-4 py-4 align-top">
+                    <span
+                      className={cn(
+                        "rounded-full px-2.5 py-1 text-[11px] font-semibold",
+                        task.risk === "high"
+                          ? "bg-red-100 text-red-700"
+                          : task.risk === "medium"
+                            ? "bg-orange-100 text-orange-700"
+                            : "bg-emerald-100 text-emerald-700",
+                      )}
+                    >
+                      {riskLabels[task.risk]}
+                    </span>
+                  </td>
+                  <td className="border-t border-slate-200/70 px-5 py-4 align-top">
+                    <div className="flex flex-col gap-2">
+                      <span className="text-sm font-medium text-slate-700">
+                        {formatShortDate(task.dueDate)}
+                      </span>
+                      {overdue ? (
+                        <span className="inline-flex w-fit rounded-full bg-red-50 px-2.5 py-1 text-[11px] font-semibold text-red-700">
+                          En retard
+                        </span>
+                      ) : task.dueDate === today ? (
+                        <span className="inline-flex w-fit rounded-full bg-indigo-50 px-2.5 py-1 text-[11px] font-semibold text-indigo-700">
+                          Aujourd&apos;hui
+                        </span>
+                      ) : null}
+                    </div>
+                  </td>
+                  {onEdit || onDelete ? (
+                    <td className="border-t border-slate-200/70 px-5 py-4 align-top">
+                      <div className="flex justify-end gap-2">
+                        {onEdit ? (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => onEdit(task)}
+                          >
+                            Modifier
+                          </Button>
+                        ) : null}
+                        {onDelete ? (
+                          <Button
+                            type="button"
+                            variant="destructive"
+                            size="sm"
+                            onClick={() => onDelete(task.id)}
+                          >
+                            Supprimer
+                          </Button>
+                        ) : null}
+                      </div>
+                    </td>
+                  ) : null}
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+
+      {tasks.length === 0 ? (
+        <div className="border-t border-slate-200/70 px-5 py-10 text-center">
+          <p className="text-sm font-medium text-slate-700">
+            Aucune tache ne correspond au filtre courant.
+          </p>
+          <p className="mt-1 text-sm text-slate-500">
+            Ajuste les filtres pour elargir la vue.
+          </p>
+        </div>
+      ) : null}
     </div>
   );
 }

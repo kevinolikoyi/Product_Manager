@@ -1,12 +1,10 @@
 'use client';
 
 import jsPDF from 'jspdf';
-import html2canvas from 'html2canvas';
 import { Button } from '@/components/ui/Button';
 import { useFinances } from '@/lib/store';
 import { useProjects } from '@/lib/store';
 import { useTasks } from '@/lib/store';
-import { Finance } from '@/data/mockFinances';
 
 export default function ReportGenerator() {
   const { finances } = useFinances();

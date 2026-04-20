@@ -111,6 +111,8 @@ export default function TaskForm({ task, onClose, onSuccess }: TaskFormProps) {
               { value: 'todo', label: 'A faire' },
               { value: 'in_progress', label: 'En cours' },
               { value: 'done', label: 'Termine' },
+              { value: 'tested', label: 'Teste' },
+              { value: 'deployed', label: 'Deploye' },
             ]}
             value={formData.status}
             onChange={(value) =>

@@ -14,6 +14,7 @@ import {
   getProjectProgressTone,
   getTodayIsoDate,
   isTaskBlocked,
+  isTaskComplete,
   isTaskOverdue,
   projectStatusLabels,
 } from '@/lib/utils';
@@ -42,7 +43,7 @@ export default function ProjectsPage() {
     const relatedTasks = tasks.filter((task) => task.project === project.name);
     const blockedTasks = relatedTasks.filter((task) => isTaskBlocked(task)).length;
     const overdueTasks = relatedTasks.filter((task) => isTaskOverdue(task, today)).length;
-    const openTasks = relatedTasks.filter((task) => task.status !== 'done').length;
+    const openTasks = relatedTasks.filter((task) => !isTaskComplete(task)).length;
 
     return {
       project,

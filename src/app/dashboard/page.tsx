@@ -1,9 +1,7 @@
 "use client";
 
 import {
-  AlertCircle,
   ArrowRight,
-  Banknote,
   BriefcaseBusiness,
   CheckCircle2,
   CircleDashed,
@@ -14,14 +12,14 @@ import AlertCard from "@/components/dashboard/AlertCard";
 import KPI from "@/components/dashboard/KPI";
 import ReportGenerator from "@/components/dashboard/ReportGenerator";
 import Layout from "@/components/layout/Layout";
-import { useFinances, useProjects, useTasks } from "@/lib/store";
+import { useProjects, useTasks } from "@/lib/store";
 import {
-  formatCompactCurrency,
   formatShortDate,
   getProjectProgressTone,
   getTaskPriorityScore,
   getTodayIsoDate,
   isTaskBlocked,
+  isTaskComplete,
   isTaskOverdue,
   priorityLabels,
   projectStatusLabels,
@@ -33,24 +31,12 @@ import { cn } from "@/lib/utils";
 export default function DashboardPage() {
   const { tasks } = useTasks();
   const { projects } = useProjects();
-  const { finances } = useFinances();
   const today = getTodayIsoDate();
-
-  const latestFinance = finances[finances.length - 1];
-  const previousFinance = finances[finances.length - 2];
-
-  const getTrend = (current: number, previous?: number) => {
-    if (!previous) {
-      return 0;
-    }
-
-    return ((current - previous) / previous) * 100;
-  };
 
   const overdueTasks = tasks.filter((task) => isTaskOverdue(task, today));
   const blockedTasks = tasks.filter((task) => isTaskBlocked(task));
   const tasksDueToday = tasks.filter(
-    (task) => task.dueDate === today && task.status !== "done",
+    (task) => task.dueDate === today && !isTaskComplete(task),
   );
   const activeProjects = projects.filter((project) => project.status === "active");
   const criticalTasks = tasks.filter(
@@ -80,8 +66,9 @@ export default function DashboardPage() {
     return left.status === "completed" ? 1 : -1;
   });
 
-  const completedTasks = tasks.filter((task) => task.status === "done").length;
+  const completedTasks = tasks.filter((task) => isTaskComplete(task)).length;
   const completionRate = Math.round((completedTasks / tasks.length) * 100);
+  const highPriorityTasks = tasks.filter((task) => task.priority === "high");
 
   const dashboardActions = (
     <>
@@ -100,38 +87,22 @@ export default function DashboardPage() {
     <Layout
       title="Tableau de bord"
       eyebrow="Vue d'ensemble"
-      description="Lecture executive de la marge, des alertes critiques et du portefeuille projet."
+      description="Lecture executive des alertes critiques, de l'execution et du portefeuille projet."
       actions={dashboardActions}
     >
       <div className="space-y-6 lg:space-y-7">
         <section className="space-y-3">
           <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-            Performance
+            Pilotage
           </p>
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-6">
             <KPI
-              title="Chiffre d'affaires"
-              value={formatCompactCurrency(latestFinance.revenue)}
-              icon={Banknote}
-              iconTone="emerald"
-              trend={getTrend(latestFinance.revenue, previousFinance?.revenue)}
-              trendLabel="vs mois precedent"
-            />
-            <KPI
-              title="Depenses"
-              value={formatCompactCurrency(latestFinance.expenses)}
-              icon={AlertCircle}
-              iconTone="red"
-              trend={getTrend(latestFinance.expenses, previousFinance?.expenses)}
-              trendLabel="vs mois precedent"
-            />
-            <KPI
-              title="Resultat net"
-              value={formatCompactCurrency(latestFinance.profit)}
+              title="Taches terminees"
+              value={completedTasks}
               icon={CheckCircle2}
               iconTone="violet"
-              trend={getTrend(latestFinance.profit, previousFinance?.profit)}
-              trendLabel="vs mois precedent"
+              trend={completionRate}
+              trendLabel="completion"
             />
             <KPI
               title="Taches en retard"
@@ -150,12 +121,28 @@ export default function DashboardPage() {
               trendLabel="attention"
             />
             <KPI
+              title="Haute priorite"
+              value={highPriorityTasks.length}
+              icon={ArrowRight}
+              iconTone="indigo"
+              trend={-1.3}
+              trendLabel="focus"
+            />
+            <KPI
               title="Projets actifs"
               value={activeProjects.length}
               icon={BriefcaseBusiness}
               iconTone="sky"
               trend={0}
               trendLabel="stable"
+            />
+            <KPI
+              title="A traiter aujourd'hui"
+              value={tasksDueToday.length}
+              icon={Clock3}
+              iconTone="amber"
+              trend={2.8}
+              trendLabel="cadence"
             />
           </div>
         </section>
@@ -214,7 +201,7 @@ export default function DashboardPage() {
                   <div
                     className={cn(
                       "mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-md border-2",
-                      task.status === "done"
+                      isTaskComplete(task)
                         ? "border-indigo-600 bg-indigo-600 text-white"
                         : "border-slate-300 bg-white text-transparent",
                     )}
@@ -227,7 +214,7 @@ export default function DashboardPage() {
                       <p
                         className={cn(
                           "text-sm font-semibold tracking-[-0.02em] text-slate-950",
-                          task.status === "done" && "text-slate-400 line-through",
+                          isTaskComplete(task) && "text-slate-400 line-through",
                         )}
                       >
                         {task.title}

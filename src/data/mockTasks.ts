@@ -3,7 +3,7 @@ export interface Task {
   title: string;
   project: string;
   assignee?: string;
-  status: "todo" | "in_progress" | "done";
+  status: "todo" | "in_progress" | "done" | "tested" | "deployed";
   priority: "low" | "medium" | "high";
   risk: "low" | "medium" | "high";
   dueDate: string;
@@ -45,7 +45,7 @@ export const mockTasks: Task[] = [
     title: "Ecrire les tests unitaires du module de synchronisation",
     project: "Automations IA",
     assignee: "Lucas Perrin",
-    status: "done",
+    status: "tested",
     priority: "medium",
     risk: "low",
     dueDate: "2026-04-16",
@@ -95,7 +95,7 @@ export const mockTasks: Task[] = [
     title: "Mettre a jour la documentation de deploiement",
     project: "Operations Cloud",
     assignee: "Iris Noel",
-    status: "done",
+    status: "deployed",
     priority: "low",
     risk: "low",
     dueDate: "2026-04-12",
@@ -105,7 +105,7 @@ export const mockTasks: Task[] = [
     title: "Corriger les regressions de facturation multi-devises",
     project: "Finance Ops",
     assignee: "Sarah Giraud",
-    status: "in_progress",
+    status: "done",
     priority: "high",
     risk: "high",
     dueDate: "2026-04-14",
@@ -115,7 +115,7 @@ export const mockTasks: Task[] = [
     title: "Valider le modele de scoring des risques projet",
     project: "Automations IA",
     assignee: "Yanis Roche",
-    status: "todo",
+    status: "tested",
     priority: "medium",
     risk: "medium",
     dueDate: "2026-04-18",

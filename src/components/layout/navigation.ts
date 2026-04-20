@@ -1,8 +1,7 @@
 import {
   FolderKanban,
   LayoutDashboard,
-  Settings2,
-  WalletCards,
+  LayoutGrid,
   ListTodo,
   type LucideIcon,
 } from "lucide-react";
@@ -11,7 +10,7 @@ export interface NavigationItem {
   label: string;
   href: string;
   icon: LucideIcon;
-  section: "navigation" | "settings";
+  section: "navigation";
 }
 
 export const navigationItems: NavigationItem[] = [
@@ -28,22 +27,16 @@ export const navigationItems: NavigationItem[] = [
     section: "navigation",
   },
   {
+    label: "Kanban",
+    href: "/kanban",
+    icon: LayoutGrid,
+    section: "navigation",
+  },
+  {
     label: "Projets",
     href: "/projects",
     icon: FolderKanban,
     section: "navigation",
-  },
-  {
-    label: "Finances",
-    href: "/finance",
-    icon: WalletCards,
-    section: "navigation",
-  },
-  {
-    label: "Configuration",
-    href: "/settings",
-    icon: Settings2,
-    section: "settings",
   },
 ];
 
@@ -66,14 +59,9 @@ export const pageMetadata: Record<
     description: "Avancement des squads et sante du portefeuille produit.",
     eyebrow: "Portefeuille",
   },
-  "/finance": {
-    title: "Finances",
-    description: "Lecture rapide des revenus, depenses et marge operationnelle.",
-    eyebrow: "Performance",
-  },
-  "/settings": {
-    title: "Configuration",
-    description: "Preferences d'affichage, densite et comportement de l'interface.",
-    eyebrow: "Workspace",
+  "/kanban": {
+    title: "Kanban",
+    description: "Pilotage visuel des taches avec drag-and-drop entre les statuts.",
+    eyebrow: "Workflow",
   },
 };

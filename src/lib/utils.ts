@@ -11,6 +11,8 @@ export const statusLabels: Record<Task["status"], string> = {
   todo: "A faire",
   in_progress: "En cours",
   done: "Terminee",
+  tested: "Testee",
+  deployed: "Deployee",
 };
 
 export const priorityLabels: Record<Task["priority"], string> = {
@@ -75,8 +77,12 @@ export function formatCurrency(value: number) {
   return standardCurrencyFormatter.format(value);
 }
 
+export function isTaskComplete(task: Task) {
+  return task.status === "done" || task.status === "tested" || task.status === "deployed";
+}
+
 export function isTaskOverdue(task: Task, today = getTodayIsoDate()) {
-  return task.dueDate < today && task.status !== "done";
+  return task.dueDate < today && !isTaskComplete(task);
 }
 
 export function isTaskBlocked(task: Task) {

@@ -1,7 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { AlertTriangle, Flame, ListTodo, Plus, TimerReset } from "lucide-react";
+import {
+  AlertTriangle,
+  Flame,
+  ListTodo,
+  Plus,
+  TimerReset,
+} from "lucide-react";
 import KPI from "@/components/dashboard/KPI";
 import TaskForm from "@/components/forms/TaskForm";
 import Layout from "@/components/layout/Layout";
@@ -15,6 +21,7 @@ import {
   getTaskPriorityScore,
   getTodayIsoDate,
   isTaskBlocked,
+  isTaskComplete,
   isTaskOverdue,
   priorityLabels,
   statusLabels,
@@ -41,7 +48,7 @@ export default function TasksPage() {
 
   const overdueTasks = tasks.filter((task) => isTaskOverdue(task, today));
   const todayTasks = tasks.filter(
-    (task) => task.dueDate === today && task.status !== "done",
+    (task) => task.dueDate === today && !isTaskComplete(task),
   );
   const highPriorityTasks = tasks.filter((task) => task.priority === "high");
   const blockedTasks = tasks.filter((task) => isTaskBlocked(task));
@@ -52,7 +59,7 @@ export default function TasksPage() {
         case "overdue":
           return isTaskOverdue(task, today);
         case "today":
-          return task.dueDate === today && task.status !== "done";
+          return task.dueDate === today && !isTaskComplete(task);
         case "high_priority":
           return task.priority === "high";
         case "blocked":
@@ -75,7 +82,7 @@ export default function TasksPage() {
     .slice(0, 4);
 
   const completionRate = Math.round(
-    (tasks.filter((task) => task.status === "done").length / tasks.length) * 100,
+    (tasks.filter((task) => isTaskComplete(task)).length / tasks.length) * 100,
   );
 
   const handleAddTask = () => {

@@ -6,41 +6,19 @@ import { CalendarRange, Download } from "lucide-react";
 import Modal from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
-import { useFinances, useProjects, useTasks } from "@/lib/store";
+import { useProjects, useTasks } from "@/lib/store";
 import {
-  formatCompactCurrency,
   formatFullDate,
   getTaskPriorityScore,
   getTodayIsoDate,
   isTaskBlocked,
+  isTaskComplete,
   isTaskOverdue,
   priorityLabels,
   projectStatusLabels,
   riskLabels,
   statusLabels,
 } from "@/lib/utils";
-
-const frenchMonthIndex: Record<string, number> = {
-  jan: 0,
-  fev: 1,
-  feb: 1,
-  mar: 2,
-  avr: 3,
-  apr: 3,
-  mai: 4,
-  may: 4,
-  jun: 5,
-  juin: 5,
-  jul: 6,
-  juil: 6,
-  aou: 7,
-  aug: 7,
-  sep: 8,
-  sept: 8,
-  oct: 9,
-  nov: 10,
-  dec: 11,
-};
 
 type Preset = "current_month" | "last_7_days" | "last_30_days";
 
@@ -57,27 +35,6 @@ function shiftDays(isoDate: string, days: number) {
   const date = new Date(isoDate);
   date.setDate(date.getDate() + days);
   return toIsoDate(date);
-}
-
-function parseFinanceMonth(monthLabel: string) {
-  const [rawMonth, rawYear] = monthLabel.trim().split(/\s+/);
-  const year = Number.parseInt(rawYear ?? "", 10);
-
-  if (!rawMonth || Number.isNaN(year)) {
-    return null;
-  }
-
-  const normalizedMonth = rawMonth
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase();
-  const monthIndex = frenchMonthIndex[normalizedMonth];
-
-  if (monthIndex === undefined) {
-    return null;
-  }
-
-  return new Date(year, monthIndex, 1);
 }
 
 function buildPeriodLabel(startDate: string, endDate: string) {
@@ -178,7 +135,6 @@ function drawTable(
 export default function ReportGenerator() {
   const { tasks } = useTasks();
   const { projects } = useProjects();
-  const { finances } = useFinances();
   const [isOpen, setIsOpen] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [startDate, setStartDate] = useState(getCurrentMonthStartIso);
@@ -194,22 +150,12 @@ export default function ReportGenerator() {
     );
     const projectNames = new Set(tasksInPeriod.map((task) => task.project));
     const impactedProjects = projects.filter((project) => projectNames.has(project.name));
-    const financesInPeriod = finances.filter((finance) => {
-      const monthDate = parseFinanceMonth(finance.month);
-      if (!monthDate) {
-        return false;
-      }
-
-      const financeIso = toIsoDate(monthDate);
-      return financeIso >= startDate && financeIso <= endDate;
-    });
 
     return {
       tasksInPeriod,
       impactedProjects,
-      financesInPeriod,
     };
-  }, [endDate, finances, projects, startDate, tasks]);
+  }, [endDate, projects, startDate, tasks]);
 
   const applyPreset = (preset: Preset) => {
     const currentDate = getTodayIsoDate();
@@ -258,15 +204,11 @@ export default function ReportGenerator() {
       const impactedProjects = [...preview.impactedProjects].sort(
         (left, right) => right.progress - left.progress,
       );
-      const financesInPeriod = preview.financesInPeriod;
 
       const overdueTasks = tasksInPeriod.filter((task) => isTaskOverdue(task, endDate));
       const blockedTasks = tasksInPeriod.filter((task) => isTaskBlocked(task));
-      const completedTasks = tasksInPeriod.filter((task) => task.status === "done");
+      const completedTasks = tasksInPeriod.filter((task) => isTaskComplete(task));
       const activeProjects = impactedProjects.filter((project) => project.status === "active");
-      const revenueTotal = financesInPeriod.reduce((sum, finance) => sum + finance.revenue, 0);
-      const expenseTotal = financesInPeriod.reduce((sum, finance) => sum + finance.expenses, 0);
-      const profitTotal = financesInPeriod.reduce((sum, finance) => sum + finance.profit, 0);
 
       let y = 18;
 
@@ -302,46 +244,6 @@ export default function ReportGenerator() {
         ],
         [72, 104],
       );
-
-      y = ensurePageSpace(doc, y + 4, 34);
-      y = addSectionTitle(doc, "Finances sur la periode", y + 4);
-      if (financesInPeriod.length === 0) {
-        y = drawTable(
-          doc,
-          y,
-          ["Information", "Detail"],
-          [[
-            "Disponibilite",
-            "Aucune entree financiere n'est disponible dans l'intervalle choisi.",
-          ]],
-          [52, 124],
-        );
-      } else {
-        y = drawTable(
-          doc,
-          y,
-          ["Mesure", "Valeur"],
-          [
-            ["Revenus", formatCompactCurrency(revenueTotal)],
-            ["Depenses", formatCompactCurrency(expenseTotal)],
-            ["Resultat net", formatCompactCurrency(profitTotal)],
-          ],
-          [72, 104],
-        );
-        y = ensurePageSpace(doc, y + 4, 28);
-        y = drawTable(
-          doc,
-          y,
-          ["Mois", "Revenus", "Depenses", "Resultat"],
-          financesInPeriod.map((finance) => [
-            finance.month,
-            formatCompactCurrency(finance.revenue),
-            formatCompactCurrency(finance.expenses),
-            formatCompactCurrency(finance.profit),
-          ]),
-          [42, 44, 44, 46],
-        );
-      }
 
       y = ensurePageSpace(doc, y + 4, 40);
       y = addSectionTitle(doc, "Taches prioritaires", y + 4);
@@ -508,12 +410,12 @@ export default function ReportGenerator() {
             </div>
             <div>
               <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
-                Finances
+                Prioritaires
               </p>
               <p className="mt-2 text-2xl font-semibold tracking-[-0.03em] text-slate-950">
-                {preview.financesInPeriod.length}
+                {preview.tasksInPeriod.filter((task) => task.priority === "high").length}
               </p>
-              <p className="text-sm text-slate-500">mois inclus</p>
+              <p className="text-sm text-slate-500">haute priorite</p>
             </div>
           </div>
 

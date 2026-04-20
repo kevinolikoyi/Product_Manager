@@ -6,6 +6,7 @@ import {
   formatShortDate,
   getTaskPriorityScore,
   getTodayIsoDate,
+  isTaskComplete,
   isTaskOverdue,
   priorityLabels,
   riskLabels,
@@ -90,7 +91,7 @@ export default function TaskTable({ tasks, onEdit, onDelete }: TaskTableProps) {
                   <span className="inline-flex w-fit rounded-full bg-red-50 px-2.5 py-1 text-[11px] font-semibold text-red-700">
                     En retard
                   </span>
-                ) : task.dueDate === today ? (
+                ) : task.dueDate === today && !isTaskComplete(task) ? (
                   <span className="inline-flex w-fit rounded-full bg-indigo-50 px-2.5 py-1 text-[11px] font-semibold text-indigo-700">
                     Aujourd&apos;hui
                   </span>
@@ -220,7 +221,7 @@ export default function TaskTable({ tasks, onEdit, onDelete }: TaskTableProps) {
                         <span className="inline-flex w-fit rounded-full bg-red-50 px-2.5 py-1 text-[11px] font-semibold text-red-700">
                           En retard
                         </span>
-                      ) : task.dueDate === today ? (
+                      ) : task.dueDate === today && !isTaskComplete(task) ? (
                         <span className="inline-flex w-fit rounded-full bg-indigo-50 px-2.5 py-1 text-[11px] font-semibold text-indigo-700">
                           Aujourd&apos;hui
                         </span>

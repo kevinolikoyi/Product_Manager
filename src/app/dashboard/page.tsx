@@ -12,7 +12,7 @@ import AlertCard from "@/components/dashboard/AlertCard";
 import KPI from "@/components/dashboard/KPI";
 import ReportGenerator from "@/components/dashboard/ReportGenerator";
 import Layout from "@/components/layout/Layout";
-import { useProjects, useTasks } from "@/lib/store";
+import { useMemberDirectory, useProjectDirectory, useProjects, useTasks } from "@/lib/store";
 import {
   formatShortDate,
   getProjectProgressTone,
@@ -31,6 +31,8 @@ import { cn } from "@/lib/utils";
 export default function DashboardPage() {
   const { tasks } = useTasks();
   const { projects } = useProjects();
+  const { getProjectName } = useProjectDirectory();
+  const { getMemberName } = useMemberDirectory();
   const today = getTodayIsoDate();
 
   const overdueTasks = tasks.filter((task) => isTaskOverdue(task, today));
@@ -67,28 +69,16 @@ export default function DashboardPage() {
   });
 
   const completedTasks = tasks.filter((task) => isTaskComplete(task)).length;
-  const completionRate = Math.round((completedTasks / tasks.length) * 100);
+  const completionRate = tasks.length
+    ? Math.round((completedTasks / tasks.length) * 100)
+    : 0;
   const highPriorityTasks = tasks.filter((task) => task.priority === "high");
-
-  const dashboardActions = (
-    <>
-      <ReportGenerator />
-      <button
-        type="button"
-        className="inline-flex items-center gap-2 rounded-full bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-[0_12px_28px_rgba(79,70,229,0.28)] transition hover:bg-indigo-500"
-      >
-        <ArrowRight className="h-4 w-4" />
-        Nouvelle tache
-      </button>
-    </>
-  );
 
   return (
     <Layout
       title="Tableau de bord"
       eyebrow="Vue d'ensemble"
-      description="Lecture executive des alertes critiques, de l'execution et du portefeuille projet."
-      actions={dashboardActions}
+      actions={<ReportGenerator />}
     >
       <div className="space-y-6 lg:space-y-7">
         <section className="space-y-3">
@@ -97,15 +87,15 @@ export default function DashboardPage() {
           </p>
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-6">
             <KPI
-              title="Taches terminees"
+              title="Tâches terminées"
               value={completedTasks}
               icon={CheckCircle2}
               iconTone="violet"
               trend={completionRate}
-              trendLabel="completion"
+              trendLabel="complétion"
             />
             <KPI
-              title="Taches en retard"
+              title="Tâches en retard"
               value={overdueTasks.length}
               icon={Clock3}
               iconTone="amber"
@@ -113,7 +103,7 @@ export default function DashboardPage() {
               trendLabel="urgence"
             />
             <KPI
-              title="Taches bloquees"
+              title="Tâches bloquées"
               value={blockedTasks.length}
               icon={ShieldX}
               iconTone="red"
@@ -121,7 +111,7 @@ export default function DashboardPage() {
               trendLabel="attention"
             />
             <KPI
-              title="Haute priorite"
+              title="Haute priorité"
               value={highPriorityTasks.length}
               icon={ArrowRight}
               iconTone="indigo"
@@ -181,10 +171,10 @@ export default function DashboardPage() {
             <div className="flex items-center justify-between border-b border-slate-200/70 px-5 py-4">
               <div>
                 <p className="text-sm font-semibold tracking-[-0.02em] text-slate-950">
-                  Taches prioritaires
+                  Tâches prioritaires
                 </p>
                 <p className="text-sm text-slate-500">
-                  Classement dynamique par risque, priorite et echeance.
+                  Classement dynamique par risque, priorite et échéance.
                 </p>
               </div>
               <div className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
@@ -233,8 +223,8 @@ export default function DashboardPage() {
                       </span>
                     </div>
                     <p className="mt-1 text-sm text-slate-500">
-                      {task.project}
-                      {task.assignee ? ` · ${task.assignee}` : ""}
+                      {getProjectName(task.projectId)}
+                      {task.assigneeId ? ` · ${getMemberName(task.assigneeId)}` : ""}
                     </p>
                   </div>
 
@@ -314,7 +304,7 @@ export default function DashboardPage() {
                 <p className="mt-2 text-xl font-semibold tracking-[-0.03em] text-slate-950">
                   {completionRate}%
                 </p>
-                <p className="text-sm text-slate-500">Taches completees</p>
+                <p className="text-sm text-slate-500">Tâches completées</p>
               </div>
               <div className="rounded-2xl bg-white/80 px-4 py-3">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">
@@ -323,7 +313,7 @@ export default function DashboardPage() {
                 <p className="mt-2 text-xl font-semibold tracking-[-0.03em] text-slate-950">
                   {tasksDueToday.length}
                 </p>
-                <p className="text-sm text-slate-500">Items a traiter</p>
+                <p className="text-sm text-slate-500">Items à traiter</p>
               </div>
               <div className="rounded-2xl bg-white/80 px-4 py-3">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">

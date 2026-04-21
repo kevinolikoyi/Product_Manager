@@ -1,8 +1,8 @@
 export interface Task {
   id: string;
   title: string;
-  project: string;
-  assignee?: string;
+  projectId: string;
+  assigneeId?: string;
   status: "todo" | "in_progress" | "done" | "tested" | "deployed";
   priority: "low" | "medium" | "high";
   risk: "low" | "medium" | "high";
@@ -13,8 +13,8 @@ export const mockTasks: Task[] = [
   {
     id: "1",
     title: "Concevoir le flux d'authentification unifie",
-    project: "Onboarding Utilisateur",
-    assignee: "Alice Martin",
+    projectId: "1",
+    assigneeId: "mem-alice",
     status: "in_progress",
     priority: "high",
     risk: "medium",
@@ -23,8 +23,8 @@ export const mockTasks: Task[] = [
   {
     id: "2",
     title: "Implementer les endpoints API pour les permissions",
-    project: "Plateforme API",
-    assignee: "Bilal Dupont",
+    projectId: "2",
+    assigneeId: "mem-bilal",
     status: "todo",
     priority: "high",
     risk: "high",
@@ -33,8 +33,8 @@ export const mockTasks: Task[] = [
   {
     id: "3",
     title: "Finaliser la politique de roles par espace de travail",
-    project: "Plateforme API",
-    assignee: "Nina Costa",
+    projectId: "2",
+    assigneeId: "mem-nina",
     status: "in_progress",
     priority: "high",
     risk: "high",
@@ -43,8 +43,8 @@ export const mockTasks: Task[] = [
   {
     id: "4",
     title: "Ecrire les tests unitaires du module de synchronisation",
-    project: "Automations IA",
-    assignee: "Lucas Perrin",
+    projectId: "7",
+    assigneeId: "mem-lucas",
     status: "tested",
     priority: "medium",
     risk: "low",
@@ -53,8 +53,8 @@ export const mockTasks: Task[] = [
   {
     id: "5",
     title: "Produire les maquettes de la vue executive",
-    project: "Design System",
-    assignee: "Claire Moreau",
+    projectId: "3",
+    assigneeId: "mem-claire",
     status: "in_progress",
     priority: "medium",
     risk: "low",
@@ -63,8 +63,8 @@ export const mockTasks: Task[] = [
   {
     id: "6",
     title: "Stabiliser le pipeline CI/CD de preproduction",
-    project: "Operations Cloud",
-    assignee: "Mehdi Kaci",
+    projectId: "4",
+    assigneeId: "mem-mehdi",
     status: "todo",
     priority: "medium",
     risk: "medium",
@@ -73,8 +73,8 @@ export const mockTasks: Task[] = [
   {
     id: "7",
     title: "Realiser l'audit securite des acces externes",
-    project: "Conformite",
-    assignee: "Sofia Bernard",
+    projectId: "5",
+    assigneeId: "mem-sofia",
     status: "todo",
     priority: "high",
     risk: "high",
@@ -83,8 +83,8 @@ export const mockTasks: Task[] = [
   {
     id: "8",
     title: "Optimiser les requetes SQL des tableaux de bord",
-    project: "Performance",
-    assignee: "Hugo Leroy",
+    projectId: "6",
+    assigneeId: "mem-hugo",
     status: "in_progress",
     priority: "medium",
     risk: "medium",
@@ -93,8 +93,8 @@ export const mockTasks: Task[] = [
   {
     id: "9",
     title: "Mettre a jour la documentation de deploiement",
-    project: "Operations Cloud",
-    assignee: "Iris Noel",
+    projectId: "4",
+    assigneeId: "mem-iris",
     status: "deployed",
     priority: "low",
     risk: "low",
@@ -103,8 +103,8 @@ export const mockTasks: Task[] = [
   {
     id: "10",
     title: "Corriger les regressions de facturation multi-devises",
-    project: "Finance Ops",
-    assignee: "Sarah Giraud",
+    projectId: "8",
+    assigneeId: "mem-sarah",
     status: "done",
     priority: "high",
     risk: "high",
@@ -113,8 +113,8 @@ export const mockTasks: Task[] = [
   {
     id: "11",
     title: "Valider le modele de scoring des risques projet",
-    project: "Automations IA",
-    assignee: "Yanis Roche",
+    projectId: "7",
+    assigneeId: "mem-yanis",
     status: "tested",
     priority: "medium",
     risk: "medium",
@@ -123,8 +123,8 @@ export const mockTasks: Task[] = [
   {
     id: "12",
     title: "Clore la migration des espaces historiques",
-    project: "Migrations",
-    assignee: "Emma Petit",
+    projectId: "9",
+    assigneeId: "mem-emma",
     status: "todo",
     priority: "high",
     risk: "high",

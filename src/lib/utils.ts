@@ -1,7 +1,6 @@
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
-import type { Project } from "@/data/mockProjects";
-import type { Task } from "@/data/mockTasks";
+import type { Project, Task } from "@/lib/types";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -36,12 +35,20 @@ export const projectStatusLabels: Record<Project["status"], string> = {
 const shortDateFormatter = new Intl.DateTimeFormat("fr-FR", {
   day: "numeric",
   month: "short",
+  timeZone: "UTC",
 });
 
 const fullDateFormatter = new Intl.DateTimeFormat("fr-FR", {
   day: "numeric",
   month: "long",
   year: "numeric",
+  timeZone: "UTC",
+});
+
+const financeMonthFormatter = new Intl.DateTimeFormat("fr-FR", {
+  month: "long",
+  year: "numeric",
+  timeZone: "UTC",
 });
 
 const compactCurrencyFormatter = new Intl.NumberFormat("fr-SN", {
@@ -58,15 +65,47 @@ const standardCurrencyFormatter = new Intl.NumberFormat("fr-SN", {
 });
 
 export function getTodayIsoDate() {
-  return new Date().toISOString().split("T")[0];
+  return new Date().toISOString().slice(0, 10);
+}
+
+export function getCurrentMonthInputValue() {
+  return new Date().toISOString().slice(0, 7);
+}
+
+function parseIsoDate(date: string) {
+  return new Date(`${date}T00:00:00.000Z`);
+}
+
+export function formatFinanceMonth(periodStart: string) {
+  if (!periodStart) {
+    return "-";
+  }
+
+  return financeMonthFormatter.format(parseIsoDate(periodStart));
+}
+
+export function monthInputToPeriodStart(value: string) {
+  return value ? `${value}-01` : "";
+}
+
+export function periodStartToMonthInput(value: string) {
+  return value.slice(0, 7);
 }
 
 export function formatShortDate(date: string) {
-  return shortDateFormatter.format(new Date(date));
+  if (!date) {
+    return "-";
+  }
+
+  return shortDateFormatter.format(parseIsoDate(date));
 }
 
 export function formatFullDate(date: string) {
-  return fullDateFormatter.format(new Date(date));
+  if (!date) {
+    return "-";
+  }
+
+  return fullDateFormatter.format(parseIsoDate(date));
 }
 
 export function formatCompactCurrency(value: number) {

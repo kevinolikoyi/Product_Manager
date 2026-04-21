@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useMemo, useState } from "react";
 import { Pencil } from "lucide-react";
 import {
   KanbanBoard as KiboKanbanBoard,
@@ -10,8 +10,8 @@ import {
   KanbanProvider,
 } from "@/components/kibo-ui/kanban";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import type { Task } from "@/data/mockTasks";
-import { useTasks } from "@/lib/store";
+import type { Task } from "@/lib/types";
+import { useMemberDirectory, useProjectDirectory, useTasks } from "@/lib/store";
 import {
   cn,
   formatShortDate,
@@ -146,49 +146,37 @@ function mergeBoardTasks(current: BoardTask[], tasks: Task[]) {
   });
 }
 
-function getAssigneeInitials(value?: string) {
-  if (!value) {
-    return "NA";
-  }
-
-  return value
-    .split(" ")
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase() ?? "")
-    .join("");
-}
-
 export default function KanbanBoard({ tasks, onEdit }: KanbanBoardProps) {
-  const { dispatch } = useTasks();
+  const { updateTaskStatus } = useTasks();
+  const { getProjectDepartmentName, getProjectName } = useProjectDirectory();
+  const { getMemberInitials, getMemberName } = useMemberDirectory();
   const [boardTasks, setBoardTasks] = useState<BoardTask[]>(() => buildBoardTasks(tasks));
+  const visibleBoardTasks = useMemo(
+    () => mergeBoardTasks(boardTasks, tasks),
+    [boardTasks, tasks],
+  );
 
-  useEffect(() => {
-    setBoardTasks((current) => mergeBoardTasks(current, tasks));
-  }, [tasks]);
-
-  const handleDataChange = (nextData: BoardTask[]) => {
+  const handleDataChange = async (nextData: BoardTask[]) => {
     setBoardTasks(nextData);
 
-    for (const item of nextData) {
-      const sourceTask = tasks.find((task) => task.id === item.id);
+    try {
+      for (const item of nextData) {
+        const sourceTask = tasks.find((task) => task.id === item.id);
 
-      if (!sourceTask || sourceTask.status === item.column) {
-        continue;
+        if (!sourceTask || sourceTask.status === item.column) {
+          continue;
+        }
+
+        await updateTaskStatus(item.id, item.column);
       }
-
-      dispatch({
-        type: "UPDATE_TASK",
-        payload: {
-          ...sourceTask,
-          status: item.column,
-        },
-      });
+    } catch (error) {
+      console.error(error);
+      setBoardTasks(mergeBoardTasks(nextData, tasks));
     }
   };
 
   return (
-    <KanbanProvider columns={columns} data={boardTasks} onDataChange={handleDataChange}>
+    <KanbanProvider columns={columns} data={visibleBoardTasks} onDataChange={handleDataChange}>
       {(column) => (
         <KiboKanbanBoard
           key={column.id}
@@ -216,7 +204,7 @@ export default function KanbanBoard({ tasks, onEdit }: KanbanBoardProps) {
                   column.badgeTone,
                 )}
               >
-                {boardTasks.filter((item) => item.column === column.id).length}
+                {visibleBoardTasks.filter((item) => item.column === column.id).length}
               </span>
             </div>
           </KanbanHeader>
@@ -240,13 +228,13 @@ export default function KanbanBoard({ tasks, onEdit }: KanbanBoardProps) {
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0 flex-1">
                         <p className="font-semibold text-sm text-slate-950">{item.task.title}</p>
-                        <p className="mt-1 text-sm text-slate-500">{item.task.project}</p>
+                        <p className="mt-1 text-sm text-slate-500">{getProjectName(item.task.projectId)}</p>
                       </div>
 
                       <div className="flex items-center gap-2">
                         <Avatar className="h-8 w-8 border border-slate-200">
                           <AvatarFallback className="bg-slate-100 text-[11px] font-semibold text-slate-700">
-                            {getAssigneeInitials(item.task.assignee)}
+                            {getMemberInitials(item.task.assigneeId)}
                           </AvatarFallback>
                         </Avatar>
 
@@ -266,6 +254,9 @@ export default function KanbanBoard({ tasks, onEdit }: KanbanBoardProps) {
                     </div>
 
                     <div className="flex flex-wrap gap-2 text-[11px] font-semibold">
+                      <span className="rounded-full bg-slate-100 px-2.5 py-1 text-slate-700">
+                        {getProjectDepartmentName(item.task.projectId)}
+                      </span>
                       <span
                         className={cn("rounded-full px-2.5 py-1", getPriorityTone(item.task.priority))}
                       >
@@ -280,7 +271,7 @@ export default function KanbanBoard({ tasks, onEdit }: KanbanBoardProps) {
                       <div className="flex items-center justify-between gap-3">
                         <span className="text-slate-500">Assignée</span>
                         <span className="font-medium text-right text-slate-900">
-                          {item.task.assignee ?? "Non assignée"}
+                          {getMemberName(item.task.assigneeId)}
                         </span>
                       </div>
                       <div className="flex items-center justify-between gap-3">

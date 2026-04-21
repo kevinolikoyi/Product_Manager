@@ -2,8 +2,9 @@
 
 import type { ReactNode } from "react";
 import { usePathname } from "next/navigation";
-import { CalendarRange, Menu, Sparkles } from "lucide-react";
+import { CalendarRange, Menu } from "lucide-react";
 import { pageMetadata } from "./navigation";
+import { getTodayIsoDate } from "@/lib/utils";
 
 interface NavbarProps {
   title?: string;
@@ -23,14 +24,15 @@ export default function Navbar({
   const pathname = usePathname();
   const fallback = pageMetadata[pathname] ?? {
     title: "AS WORLD TECH",
-    description: "Workspace collaboratif et pilotage des operations.",
+    description: "Workspace collaboratif et pilotage des opérations.",
     eyebrow: "Workspace",
   };
 
   const monthLabel = new Intl.DateTimeFormat("fr-FR", {
     month: "short",
     year: "numeric",
-  }).format(new Date());
+    timeZone: "UTC",
+  }).format(new Date(`${getTodayIsoDate()}T00:00:00.000Z`));
 
   return (
     <header className="surface-panel sticky top-3 z-20 rounded-[28px] border border-white/45 px-4 py-4 sm:px-5">
@@ -54,7 +56,7 @@ export default function Navbar({
                 {title ?? fallback.title}
               </h1>
               <span className="hidden rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-700 sm:inline-flex">
-                Systeme stable
+                Système stable
               </span>
             </div>
             <p className="mt-1 max-w-3xl text-sm text-slate-500 sm:text-[15px]">
@@ -67,10 +69,6 @@ export default function Navbar({
           <div className="inline-flex items-center gap-2 rounded-full border border-slate-200/80 bg-white/80 px-3 py-2 text-xs font-medium text-slate-600 shadow-sm">
             <CalendarRange className="h-4 w-4 text-slate-400" />
             <span className="capitalize">{monthLabel}</span>
-          </div>
-          <div className="hidden items-center gap-2 rounded-full border border-indigo-200/80 bg-indigo-50 px-3 py-2 text-xs font-semibold text-indigo-700 shadow-sm sm:inline-flex">
-            <Sparkles className="h-4 w-4" />
-            <span>Focus executive</span>
           </div>
           {actions}
         </div>

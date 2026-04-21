@@ -6,7 +6,7 @@ import { CalendarRange, Download } from "lucide-react";
 import Modal from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
-import { useProjects, useTasks } from "@/lib/store";
+import { useProjectDirectory, useProjects, useTasks } from "@/lib/store";
 import {
   formatFullDate,
   getTaskPriorityScore,
@@ -23,17 +23,17 @@ import {
 type Preset = "current_month" | "last_7_days" | "last_30_days";
 
 function toIsoDate(value: Date) {
-  return value.toISOString().split("T")[0];
+  return value.toISOString().slice(0, 10);
 }
 
 function getCurrentMonthStartIso() {
   const today = new Date();
-  return toIsoDate(new Date(today.getFullYear(), today.getMonth(), 1));
+  return toIsoDate(new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), 1)));
 }
 
 function shiftDays(isoDate: string, days: number) {
-  const date = new Date(isoDate);
-  date.setDate(date.getDate() + days);
+  const date = new Date(`${isoDate}T00:00:00.000Z`);
+  date.setUTCDate(date.getUTCDate() + days);
   return toIsoDate(date);
 }
 
@@ -135,6 +135,7 @@ function drawTable(
 export default function ReportGenerator() {
   const { tasks } = useTasks();
   const { projects } = useProjects();
+  const { getProjectName } = useProjectDirectory();
   const [isOpen, setIsOpen] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [startDate, setStartDate] = useState(getCurrentMonthStartIso);
@@ -148,8 +149,8 @@ export default function ReportGenerator() {
     const tasksInPeriod = tasks.filter(
       (task) => task.dueDate >= startDate && task.dueDate <= endDate,
     );
-    const projectNames = new Set(tasksInPeriod.map((task) => task.project));
-    const impactedProjects = projects.filter((project) => projectNames.has(project.name));
+    const projectIds = new Set(tasksInPeriod.map((task) => task.projectId));
+    const impactedProjects = projects.filter((project) => projectIds.has(project.id));
 
     return {
       tasksInPeriod,
@@ -262,7 +263,7 @@ export default function ReportGenerator() {
           ["Tache", "Projet", "Statut", "Priorite", "Echeance"],
           tasksInPeriod.slice(0, 8).map((task) => [
             task.title,
-            task.project,
+            getProjectName(task.projectId),
             `${statusLabels[task.status]} / ${riskLabels[task.risk]}`,
             priorityLabels[task.priority],
             formatFullDate(task.dueDate),
@@ -282,7 +283,7 @@ export default function ReportGenerator() {
           [52, 124],
         );
       } else {
-        y = drawTable(
+        drawTable(
           doc,
           y,
           ["Projet", "Statut", "Progression", "Volume"],

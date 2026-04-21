@@ -1,6 +1,6 @@
 'use client';
 
-import { ReactNode, useEffect, useState } from 'react';
+import { ReactNode, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 
@@ -8,20 +8,11 @@ interface ModalProps {
   isOpen: boolean;
   onClose: () => void;
   title: string;
+  description?: string;
   children: ReactNode;
 }
 
-export default function Modal({ isOpen, onClose, title, children }: ModalProps) {
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-
-    return () => {
-      setMounted(false);
-    };
-  }, []);
-
+export default function Modal({ isOpen, onClose, title, description, children }: ModalProps) {
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = 'hidden';
@@ -33,7 +24,7 @@ export default function Modal({ isOpen, onClose, title, children }: ModalProps) 
     };
   }, [isOpen]);
 
-  if (!mounted || !isOpen) return null;
+  if (typeof document === 'undefined' || !isOpen) return null;
 
   return createPortal(
     <div
@@ -59,7 +50,7 @@ export default function Modal({ isOpen, onClose, title, children }: ModalProps) 
                 {title}
               </h3>
               <p className="mt-1 text-sm text-slate-500">
-                Met a jour les informations portefeuille et la progression de livraison.
+                {description ?? 'Met a jour les informations portefeuille et la progression de livraison.'}
               </p>
             </div>
             <button

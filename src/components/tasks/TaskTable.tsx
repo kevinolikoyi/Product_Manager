@@ -1,8 +1,10 @@
 "use client";
 
-import type { Task } from "@/data/mockTasks";
+import type { Task } from "@/lib/types";
 import { Button } from "@/components/ui/Button";
+import { useMemberDirectory, useProjectDirectory } from "@/lib/store";
 import {
+  cn,
   formatShortDate,
   getTaskPriorityScore,
   getTodayIsoDate,
@@ -12,7 +14,6 @@ import {
   riskLabels,
   statusLabels,
 } from "@/lib/utils";
-import { cn } from "@/lib/utils";
 
 interface TaskTableProps {
   tasks: Task[];
@@ -22,6 +23,8 @@ interface TaskTableProps {
 
 export default function TaskTable({ tasks, onEdit, onDelete }: TaskTableProps) {
   const today = getTodayIsoDate();
+  const { getProjectDepartmentName, getProjectName } = useProjectDirectory();
+  const { getMemberName } = useMemberDirectory();
 
   return (
     <div className="overflow-hidden rounded-[30px] border border-white/60">
@@ -37,7 +40,9 @@ export default function TaskTable({ tasks, onEdit, onDelete }: TaskTableProps) {
                   <p className="text-sm font-semibold tracking-[-0.02em] text-slate-950">
                     {task.title}
                   </p>
-                  <p className="mt-1 text-sm text-slate-500">{task.project}</p>
+                  <p className="mt-1 text-sm text-slate-500">
+                    {getProjectName(task.projectId)} {"·"} {getProjectDepartmentName(task.projectId)}
+                  </p>
                 </div>
                 <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-600">
                   Score {score}
@@ -78,7 +83,7 @@ export default function TaskTable({ tasks, onEdit, onDelete }: TaskTableProps) {
                 <div className="flex items-center justify-between gap-3">
                   <span className="text-slate-500">Assigne</span>
                   <span className="font-medium text-slate-900">
-                    {task.assignee ?? "Non assigne"}
+                    {getMemberName(task.assigneeId)}
                   </span>
                 </div>
                 <div className="flex items-center justify-between gap-3">
@@ -101,12 +106,7 @@ export default function TaskTable({ tasks, onEdit, onDelete }: TaskTableProps) {
               {onEdit || onDelete ? (
                 <div className="flex flex-wrap gap-2">
                   {onEdit ? (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => onEdit(task)}
-                    >
+                    <Button type="button" variant="outline" size="sm" onClick={() => onEdit(task)}>
                       Modifier
                     </Button>
                   ) : null}
@@ -169,7 +169,7 @@ export default function TaskTable({ tasks, onEdit, onDelete }: TaskTableProps) {
                         {task.title}
                       </p>
                       <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-slate-500">
-                        <span>{task.assignee ?? "Non assigne"}</span>
+                        <span>{getMemberName(task.assigneeId)}</span>
                         <span className="rounded-full bg-slate-100 px-2 py-0.5 font-semibold text-slate-600">
                           Score {score}
                         </span>
@@ -177,7 +177,12 @@ export default function TaskTable({ tasks, onEdit, onDelete }: TaskTableProps) {
                     </div>
                   </td>
                   <td className="border-t border-slate-200/70 px-4 py-4 align-top text-sm text-slate-600">
-                    {task.project}
+                    <div className="min-w-[180px]">
+                      <p>{getProjectName(task.projectId)}</p>
+                      <p className="mt-1 text-xs text-slate-500">
+                        {getProjectDepartmentName(task.projectId)}
+                      </p>
+                    </div>
                   </td>
                   <td className="border-t border-slate-200/70 px-4 py-4 align-top">
                     <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-semibold text-slate-700">

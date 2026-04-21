@@ -1,8 +1,9 @@
 'use client';
 
 import { MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
-import { type Project } from '@/data/mockProjects';
+import type { Project } from '@/lib/types';
 import { Button } from '@/components/ui/Button';
+import { useProjectDirectory } from '@/lib/store';
 import { cn, getProjectProgressTone, projectStatusLabels } from '@/lib/utils';
 
 interface ProjectCardProps {
@@ -22,6 +23,7 @@ export default function ProjectCard({
   onEdit,
   onDelete,
 }: ProjectCardProps) {
+  const { getDepartmentName } = useProjectDirectory();
   const progressTone = getProjectProgressTone(project.status);
   const statusClasses =
     project.status === 'active'
@@ -45,6 +47,9 @@ export default function ProjectCard({
             <span className={cn('h-3 w-3 rounded-full', progressTone)} />
             <span className={cn('rounded-full px-2.5 py-1 text-[11px] font-semibold', statusClasses)}>
               {projectStatusLabels[project.status]}
+            </span>
+            <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-semibold text-slate-600">
+              {getDepartmentName(project.departmentId)}
             </span>
           </div>
           <h3 className="truncate text-lg font-semibold tracking-[-0.03em] text-slate-950">

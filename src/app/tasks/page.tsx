@@ -14,8 +14,13 @@ import Layout from "@/components/layout/Layout";
 import TaskTable from "@/components/tasks/TaskTable";
 import Modal from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
-import type { Task } from "@/data/mockTasks";
-import { useTasks, useWorkspacePreferences } from "@/lib/store";
+import type { Task } from "@/lib/types";
+import {
+  useMemberDirectory,
+  useProjectDirectory,
+  useTasks,
+  useWorkspacePreferences,
+} from "@/lib/store";
 import {
   formatShortDate,
   getTaskPriorityScore,
@@ -39,7 +44,9 @@ const filterLabels: Record<Filter, string> = {
 };
 
 export default function TasksPage() {
-  const { tasks, dispatch } = useTasks();
+  const { tasks, deleteTaskById } = useTasks();
+  const { getMemberName } = useMemberDirectory();
+  const { getProjectName } = useProjectDirectory();
   const { preferences } = useWorkspacePreferences();
   const [filter, setFilter] = useState<Filter>("all");
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -81,9 +88,11 @@ export default function TasksPage() {
     )
     .slice(0, 4);
 
-  const completionRate = Math.round(
-    (tasks.filter((task) => isTaskComplete(task)).length / tasks.length) * 100,
-  );
+  const completionRate = tasks.length
+    ? Math.round(
+        (tasks.filter((task) => isTaskComplete(task)).length / tasks.length) * 100,
+      )
+    : 0;
 
   const handleAddTask = () => {
     setEditingTask(null);
@@ -95,9 +104,19 @@ export default function TasksPage() {
     setIsModalOpen(true);
   };
 
-  const handleDeleteTask = (id: string) => {
-    if (confirm("Voulez-vous vraiment supprimer cette tache ?")) {
-      dispatch({ type: "DELETE_TASK", payload: id });
+  const handleDeleteTask = async (id: string) => {
+    if (!confirm("Voulez-vous vraiment supprimer cette tache ?")) {
+      return;
+    }
+
+    try {
+      await deleteTaskById(id);
+    } catch (error) {
+      window.alert(
+        error instanceof Error
+          ? error.message
+          : "Suppression impossible pour cette tache.",
+      );
     }
   };
 
@@ -171,7 +190,7 @@ export default function TasksPage() {
                 Filtres d&apos;execution
               </p>
               <p className="text-sm text-slate-500">
-                Vue frontend uniquement, branchee sur le store mock.
+                Tri automatique par priorite, risque et echeance.
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
@@ -225,122 +244,122 @@ export default function TasksPage() {
 
           {preferences.showInsights ? (
             <div className="space-y-6">
-            <article className="surface-card rounded-[30px] border border-white/60 p-5">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-semibold tracking-[-0.02em] text-slate-950">
-                    Radar execution
-                  </p>
-                  <p className="text-sm text-slate-500">
-                    Priorites les plus sensibles du sprint.
-                  </p>
-                </div>
-                <div className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
-                  {completionRate}% complete
-                </div>
-              </div>
-
-              <div className="mt-5 space-y-3">
-                {focusTasks.map((task) => (
-                  <div
-                    key={task.id}
-                    className="rounded-[22px] border border-slate-200/70 bg-white/70 p-4"
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <p className="text-sm font-semibold tracking-[-0.02em] text-slate-950">
-                          {task.title}
-                        </p>
-                        <p className="mt-1 text-sm text-slate-500">
-                          {task.project}
-                          {task.assignee ? ` · ${task.assignee}` : ""}
-                        </p>
-                      </div>
-                      <span
-                        className={cn(
-                          "shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold",
-                          task.priority === "high"
-                            ? "bg-red-100 text-red-700"
-                            : "bg-amber-100 text-amber-700",
-                        )}
-                      >
-                        {priorityLabels[task.priority]}
-                      </span>
-                    </div>
-                    <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
-                      <span className="rounded-full bg-slate-100 px-2.5 py-1 font-semibold text-slate-600">
-                        {statusLabels[task.status]}
-                      </span>
-                      <span className="rounded-full bg-indigo-50 px-2.5 py-1 font-semibold text-indigo-700">
-                        Ech. {formatShortDate(task.dueDate)}
-                      </span>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleEditTask(task)}
-                        className="ml-auto"
-                      >
-                        Modifier
-                      </Button>
-                    </div>
+              <article className="surface-card rounded-[30px] border border-white/60 p-5">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-semibold tracking-[-0.02em] text-slate-950">
+                      Radar execution
+                    </p>
+                    <p className="text-sm text-slate-500">
+                      Priorites les plus sensibles du sprint.
+                    </p>
                   </div>
-                ))}
-              </div>
-            </article>
+                  <div className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
+                    {completionRate}% complete
+                  </div>
+                </div>
 
-            <article className="surface-card rounded-[30px] border border-white/60 p-5">
-              <p className="text-sm font-semibold tracking-[-0.02em] text-slate-950">
-                Distribution
-              </p>
-              <p className="text-sm text-slate-500">
-                Lecture rapide de la charge ouverte.
-              </p>
-
-              <div className="mt-5 space-y-4">
-                {[
-                  {
-                    label: "Haute priorite",
-                    value: highPriorityTasks.length,
-                    tone: "bg-red-500",
-                  },
-                  {
-                    label: "En retard",
-                    value: overdueTasks.length,
-                    tone: "bg-amber-500",
-                  },
-                  {
-                    label: "Aujourd'hui",
-                    value: todayTasks.length,
-                    tone: "bg-indigo-500",
-                  },
-                  {
-                    label: "Bloquees",
-                    value: blockedTasks.length,
-                    tone: "bg-slate-900",
-                  },
-                ].map((item) => {
-                  const width = tasks.length
-                    ? Math.max((item.value / tasks.length) * 100, 8)
-                    : 0;
-
-                  return (
-                    <div key={item.label}>
-                      <div className="mb-2 flex items-center justify-between text-sm">
-                        <span className="font-medium text-slate-600">{item.label}</span>
-                        <span className="font-semibold text-slate-950">{item.value}</span>
+                <div className="mt-5 space-y-3">
+                  {focusTasks.map((task) => (
+                    <div
+                      key={task.id}
+                      className="rounded-[22px] border border-slate-200/70 bg-white/70 p-4"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="text-sm font-semibold tracking-[-0.02em] text-slate-950">
+                            {task.title}
+                          </p>
+                          <p className="mt-1 text-sm text-slate-500">
+                            {getProjectName(task.projectId)}
+                            {task.assigneeId ? ` · ${getMemberName(task.assigneeId)}` : ""}
+                          </p>
+                        </div>
+                        <span
+                          className={cn(
+                            "shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold",
+                            task.priority === "high"
+                              ? "bg-red-100 text-red-700"
+                              : "bg-amber-100 text-amber-700",
+                          )}
+                        >
+                          {priorityLabels[task.priority]}
+                        </span>
                       </div>
-                      <div className="h-2.5 overflow-hidden rounded-full bg-slate-200/70">
-                        <div
-                          className={cn("h-full rounded-full", item.tone)}
-                          style={{ width: `${width}%` }}
-                        />
+                      <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
+                        <span className="rounded-full bg-slate-100 px-2.5 py-1 font-semibold text-slate-600">
+                          {statusLabels[task.status]}
+                        </span>
+                        <span className="rounded-full bg-indigo-50 px-2.5 py-1 font-semibold text-indigo-700">
+                          Ech. {formatShortDate(task.dueDate)}
+                        </span>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleEditTask(task)}
+                          className="ml-auto"
+                        >
+                          Modifier
+                        </Button>
                       </div>
                     </div>
-                  );
-                })}
-              </div>
-            </article>
+                  ))}
+                </div>
+              </article>
+
+              <article className="surface-card rounded-[30px] border border-white/60 p-5">
+                <p className="text-sm font-semibold tracking-[-0.02em] text-slate-950">
+                  Distribution
+                </p>
+                <p className="text-sm text-slate-500">
+                  Lecture rapide de la charge ouverte.
+                </p>
+
+                <div className="mt-5 space-y-4">
+                  {[
+                    {
+                      label: "Haute priorite",
+                      value: highPriorityTasks.length,
+                      tone: "bg-red-500",
+                    },
+                    {
+                      label: "En retard",
+                      value: overdueTasks.length,
+                      tone: "bg-amber-500",
+                    },
+                    {
+                      label: "Aujourd'hui",
+                      value: todayTasks.length,
+                      tone: "bg-indigo-500",
+                    },
+                    {
+                      label: "Bloquees",
+                      value: blockedTasks.length,
+                      tone: "bg-slate-900",
+                    },
+                  ].map((item) => {
+                    const width = tasks.length
+                      ? Math.max((item.value / tasks.length) * 100, 8)
+                      : 0;
+
+                    return (
+                      <div key={item.label}>
+                        <div className="mb-2 flex items-center justify-between text-sm">
+                          <span className="font-medium text-slate-600">{item.label}</span>
+                          <span className="font-semibold text-slate-950">{item.value}</span>
+                        </div>
+                        <div className="h-2.5 overflow-hidden rounded-full bg-slate-200/70">
+                          <div
+                            className={cn("h-full rounded-full", item.tone)}
+                            style={{ width: `${width}%` }}
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </article>
             </div>
           ) : null}
         </section>

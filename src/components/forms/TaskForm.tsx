@@ -1,8 +1,14 @@
 'use client';
 
 import { useState, type FormEvent } from 'react';
-import { type Task } from '@/data/mockTasks';
-import { useProjects, useTasks } from '@/lib/store';
+import type { Task } from '@/lib/types';
+import {
+  useBackendStatus,
+  useDepartments,
+  useMembers,
+  useProjects,
+  useTasks,
+} from '@/lib/store';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { SelectField } from '@/components/ui/Select';
@@ -14,13 +20,18 @@ interface TaskFormProps {
 }
 
 export default function TaskForm({ task, onClose, onSuccess }: TaskFormProps) {
-  const { dispatch: taskDispatch } = useTasks();
+  const { saveTask } = useTasks();
+  const backendStatus = useBackendStatus();
+  const { departments } = useDepartments();
+  const { members } = useMembers();
   const { projects } = useProjects();
+  const initialProject = task ? projects.find((project) => project.id === task.projectId) : null;
 
   const [formData, setFormData] = useState({
     title: task?.title || '',
-    project: task?.project || '',
-    assignee: task?.assignee || '',
+    departmentId: initialProject?.departmentId || '',
+    projectId: task?.projectId || '',
+    assigneeId: task?.assigneeId || '',
     status: task?.status || 'todo',
     priority: task?.priority || 'medium',
     risk: task?.risk || 'medium',
@@ -31,16 +42,31 @@ export default function TaskForm({ task, onClose, onSuccess }: TaskFormProps) {
   today.setHours(0, 0, 0, 0);
 
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const projectOptions = projects.map((project) => ({
-    value: project.name,
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const filteredProjects = projects.filter((project) =>
+    formData.departmentId ? project.departmentId === formData.departmentId : true,
+  );
+  const projectOptions = filteredProjects.map((project) => ({
+    value: project.id,
     label: project.name,
   }));
+  const selectableMembers =
+    backendStatus.configured && backendStatus.mode !== 'supabase' ? [] : members;
+  const memberOptions = selectableMembers
+    .filter((member) =>
+      formData.departmentId ? member.departmentId === formData.departmentId : true,
+    )
+    .map((member) => ({
+      value: member.id,
+      label: member.name,
+    }));
 
   const validate = () => {
     const nextErrors: Record<string, string> = {};
 
     if (!formData.title.trim()) nextErrors.title = 'Titre requis';
-    if (!formData.project) nextErrors.project = 'Projet requis';
+    if (!formData.departmentId) nextErrors.departmentId = 'Departement requis';
+    if (!formData.projectId) nextErrors.project = 'Projet requis';
     if (formData.dueDate && new Date(formData.dueDate) <= today) {
       nextErrors.dueDate = 'Date limite dans le passe';
     }
@@ -49,20 +75,28 @@ export default function TaskForm({ task, onClose, onSuccess }: TaskFormProps) {
     return Object.keys(nextErrors).length === 0;
   };
 
-  const handleSubmit = (event: FormEvent) => {
+  const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
     if (!validate()) return;
+    setSubmitError(null);
 
-    const id = task?.id || Date.now().toString();
+    const id = task?.id || crypto.randomUUID();
     const newTask: Task = {
       id,
-      ...formData,
+      title: formData.title,
+      projectId: formData.projectId,
+      assigneeId: formData.assigneeId || undefined,
+      status: formData.status,
+      priority: formData.priority,
+      risk: formData.risk,
+      dueDate: formData.dueDate,
     };
 
-    if (task) {
-      taskDispatch({ type: 'UPDATE_TASK', payload: newTask });
-    } else {
-      taskDispatch({ type: 'ADD_TASK', payload: newTask });
+    try {
+      await saveTask(newTask);
+    } catch (error) {
+      setSubmitError(error instanceof Error ? error.message : "Echec d'enregistrement de la tache.");
+      return;
     }
 
     onSuccess();
@@ -82,11 +116,38 @@ export default function TaskForm({ task, onClose, onSuccess }: TaskFormProps) {
       </div>
 
       <div>
+        <label className="mb-1 block text-sm font-medium text-gray-700">Departement</label>
+        <SelectField
+          options={departments.map((department) => ({
+            value: department.id,
+            label: department.name,
+          }))}
+          value={formData.departmentId}
+          onChange={(value) =>
+            setFormData((current) => ({
+              ...current,
+              departmentId: value,
+              projectId: projects.some(
+                (project) =>
+                  project.id === current.projectId && project.departmentId === value,
+              )
+                ? current.projectId
+                : '',
+            }))
+          }
+          placeholder="Selectionnez un departement"
+        />
+        {errors.departmentId ? (
+          <p className="mt-1 text-sm text-red-600">{errors.departmentId}</p>
+        ) : null}
+      </div>
+
+      <div>
         <label className="mb-1 block text-sm font-medium text-gray-700">Projet</label>
         <SelectField
           options={projectOptions}
-          value={formData.project}
-          onChange={(value) => setFormData({ ...formData, project: value })}
+          value={formData.projectId}
+          onChange={(value) => setFormData({ ...formData, projectId: value })}
           placeholder="Selectionnez un projet"
         />
         {errors.project ? <p className="mt-1 text-sm text-red-600">{errors.project}</p> : null}
@@ -95,14 +156,19 @@ export default function TaskForm({ task, onClose, onSuccess }: TaskFormProps) {
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <div>
           <label className="mb-1 block text-sm font-medium text-gray-700">Assigne a</label>
-          <Input
-            value={formData.assignee}
-            onChange={(event) =>
-              setFormData({ ...formData, assignee: event.target.value })
-            }
-            className="w-full"
-            placeholder="Nom du collaborateur"
+          <SelectField
+            options={memberOptions}
+            value={formData.assigneeId}
+            onChange={(value) => setFormData({ ...formData, assigneeId: value })}
+            placeholder="Selectionnez un collaborateur"
           />
+          <p className="mt-1 text-xs text-slate-500">
+            {backendStatus.mode === 'supabase'
+              ? 'Collaborateurs charges depuis le workspace Supabase.'
+              : backendStatus.configured
+                ? 'Connectez une session Supabase pour charger les collaborateurs reels.'
+                : 'Liste locale de demonstration active.'}
+          </p>
         </div>
         <div>
           <label className="mb-1 block text-sm font-medium text-gray-700">Statut</label>
@@ -163,6 +229,8 @@ export default function TaskForm({ task, onClose, onSuccess }: TaskFormProps) {
           ) : null}
         </div>
       </div>
+
+      {submitError ? <p className="text-sm text-red-600">{submitError}</p> : null}
 
       <div className="flex items-center justify-end gap-3 pt-2">
         <Button type="button" variant="outline" onClick={onClose}>

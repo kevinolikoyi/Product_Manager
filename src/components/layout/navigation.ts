@@ -10,7 +10,7 @@ export interface NavigationItem {
   label: string;
   href: string;
   icon: LucideIcon;
-  section: "navigation";
+  section: "navigation" | "settings";
 }
 
 export const navigationItems: NavigationItem[] = [
@@ -18,6 +18,12 @@ export const navigationItems: NavigationItem[] = [
     label: "Tableau de bord",
     href: "/dashboard",
     icon: LayoutDashboard,
+    section: "navigation",
+  },
+  {
+    label: "Projets",
+    href: "/projects",
+    icon: FolderKanban,
     section: "navigation",
   },
   {
@@ -30,12 +36,6 @@ export const navigationItems: NavigationItem[] = [
     label: "Kanban",
     href: "/kanban",
     icon: LayoutGrid,
-    section: "navigation",
-  },
-  {
-    label: "Projets",
-    href: "/projects",
-    icon: FolderKanban,
     section: "navigation",
   },
 ];

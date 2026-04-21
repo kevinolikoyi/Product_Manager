@@ -1,17 +1,18 @@
 "use client";
 
 import { useState } from "react";
-import { Banknote, ReceiptText, Wallet } from "lucide-react";
+import { Banknote, Pencil, ReceiptText, Wallet } from "lucide-react";
 import KPI from "@/components/dashboard/KPI";
 import FinanceForm from "@/components/dashboard/FinanceForm";
 import Layout from "@/components/layout/Layout";
 import { useFinances } from "@/lib/store";
-import { formatCompactCurrency } from "@/lib/utils";
+import type { Finance } from "@/lib/types";
+import { formatCompactCurrency, formatFinanceMonth } from "@/lib/utils";
 
 export default function FinancePage() {
   const { finances } = useFinances();
   const [showForm, setShowForm] = useState(false);
-  const [month, setMonth] = useState("");
+  const [editingFinance, setEditingFinance] = useState<Finance | null>(null);
 
   const latestFinance = finances[finances.length - 1];
   const previousFinance = finances[finances.length - 2];
@@ -24,8 +25,6 @@ export default function FinancePage() {
     return ((current - previous) / previous) * 100;
   };
 
-  const months = ["Jan 2024", "Fev 2024", "Mar 2024", "Avr 2024", "Mai 2024", "Juin 2024"];
-
   return (
     <Layout
       title="Finances"
@@ -34,7 +33,10 @@ export default function FinancePage() {
       actions={
         <button
           type="button"
-          onClick={() => setShowForm(true)}
+          onClick={() => {
+            setEditingFinance(null);
+            setShowForm(true);
+          }}
           className="inline-flex items-center rounded-full bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-500"
         >
           Nouveau mois
@@ -45,70 +47,86 @@ export default function FinancePage() {
         <div className="grid gap-4 md:grid-cols-3">
           <KPI
             title="Chiffre d'affaires"
-            value={formatCompactCurrency(latestFinance.revenue)}
+            value={formatCompactCurrency(latestFinance?.revenue ?? 0)}
             icon={Banknote}
             iconTone="emerald"
-            trend={getTrend(latestFinance.revenue, previousFinance?.revenue)}
+            trend={getTrend(latestFinance?.revenue ?? 0, previousFinance?.revenue)}
             trendLabel="vs mois precedent"
           />
           <KPI
             title="Depenses"
-            value={formatCompactCurrency(latestFinance.expenses)}
+            value={formatCompactCurrency(latestFinance?.expenses ?? 0)}
             icon={ReceiptText}
             iconTone="red"
-            trend={getTrend(latestFinance.expenses, previousFinance?.expenses)}
+            trend={getTrend(latestFinance?.expenses ?? 0, previousFinance?.expenses)}
             trendLabel="vs mois precedent"
           />
           <KPI
             title="Profit"
-            value={formatCompactCurrency(latestFinance.profit)}
+            value={formatCompactCurrency(latestFinance?.profit ?? 0)}
             icon={Wallet}
             iconTone="violet"
-            trend={getTrend(latestFinance.profit, previousFinance?.profit)}
+            trend={getTrend(latestFinance?.profit ?? 0, previousFinance?.profit)}
             trendLabel="vs mois precedent"
           />
         </div>
 
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {months.slice(-6).map((currentMonth) => {
-            const finance = finances.find((entry) => entry.month === currentMonth);
-
-            return (
+        {finances.length === 0 ? (
+          <article className="surface-card rounded-[24px] border border-white/60 p-6">
+            <h3 className="text-lg font-semibold tracking-[-0.02em] text-slate-950">
+              Aucun historique financier
+            </h3>
+            <p className="mt-2 text-sm text-slate-500">
+              Les donnees mensuelles seront chargees depuis Supabase des qu&apos;une premiere periode sera saisie.
+            </p>
+          </article>
+        ) : (
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {[...finances].reverse().map((finance) => (
               <article
-                key={currentMonth}
+                key={finance.id}
                 className="surface-card rounded-[24px] border border-white/60 p-5"
               >
-                <h3 className="text-lg font-semibold tracking-[-0.02em] text-slate-950">
-                  {currentMonth}
-                </h3>
-                {finance ? (
-                  <div className="mt-4 space-y-2">
-                    <p className="text-2xl font-semibold tracking-[-0.03em] text-emerald-600">
-                      {formatCompactCurrency(finance.revenue)}
-                    </p>
-                    <p className="text-sm text-slate-500">
-                      Profit {formatCompactCurrency(finance.profit)}
-                    </p>
-                  </div>
-                ) : (
+                <div className="flex items-start justify-between gap-3">
+                  <h3 className="text-lg font-semibold tracking-[-0.02em] text-slate-950">
+                    {formatFinanceMonth(finance.periodStart)}
+                  </h3>
                   <button
                     type="button"
                     onClick={() => {
-                      setMonth(currentMonth);
+                      setEditingFinance(finance);
                       setShowForm(true);
                     }}
-                    className="mt-4 text-sm font-semibold text-emerald-600 transition hover:text-emerald-500"
+                    className="inline-flex items-center gap-1 rounded-full border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-600 transition hover:bg-slate-50"
                   >
-                    Saisir les donnees
+                    <Pencil className="h-3.5 w-3.5" />
+                    Modifier
                   </button>
-                )}
+                </div>
+                <div className="mt-4 space-y-2">
+                  <p className="text-2xl font-semibold tracking-[-0.03em] text-emerald-600">
+                    {formatCompactCurrency(finance.revenue)}
+                  </p>
+                  <p className="text-sm text-slate-500">
+                    Depenses {formatCompactCurrency(finance.expenses)}
+                  </p>
+                  <p className="text-sm text-slate-500">
+                    Profit {formatCompactCurrency(finance.profit)}
+                  </p>
+                </div>
               </article>
-            );
-          })}
-        </div>
+            ))}
+          </div>
+        )}
 
         {showForm ? (
-          <FinanceForm month={month || "Nouveau mois"} onClose={() => setShowForm(false)} />
+          <FinanceForm
+            finance={editingFinance}
+            onClose={() => {
+              setShowForm(false);
+              setEditingFinance(null);
+            }}
+          />
         ) : null}
       </div>
     </Layout>

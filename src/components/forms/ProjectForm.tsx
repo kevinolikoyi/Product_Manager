@@ -2,7 +2,7 @@
 
 import { useState, type FormEvent } from 'react';
 import type { Project } from '@/lib/types';
-import { useDepartments, useProjects } from '@/lib/store';
+import { useBackendStatus, useDepartments, useProjects } from '@/lib/store';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { SelectField } from '@/components/ui/Select';
@@ -16,6 +16,7 @@ interface ProjectFormProps {
 export default function ProjectForm({ project, onClose, onSuccess }: ProjectFormProps) {
   const { saveProject } = useProjects();
   const { departments } = useDepartments();
+  const backendStatus = useBackendStatus();
 
   const [formData, setFormData] = useState({
     name: project?.name || '',
@@ -51,7 +52,7 @@ export default function ProjectForm({ project, onClose, onSuccess }: ProjectForm
     if (!validate()) return;
     setSubmitError(null);
 
-    const id = project?.id || crypto.randomUUID();
+    const id = project?.id || '';
     if (!departments.some((department) => department.id === formData.departmentId)) {
       setSubmitError('Le departement selectionne est introuvable.');
       return;
@@ -97,6 +98,15 @@ export default function ProjectForm({ project, onClose, onSuccess }: ProjectForm
           onChange={(value) => setFormData({ ...formData, departmentId: value })}
           placeholder="Selectionnez un departement"
         />
+        {departments.length === 0 ? (
+          <p className="mt-2 text-sm text-slate-500">
+            {backendStatus.loading
+              ? 'Chargement des departements...'
+              : backendStatus.error
+                ? `Departements indisponibles. ${backendStatus.error}`
+                : 'Aucun departement disponible dans le workspace actif.'}
+          </p>
+        ) : null}
         {errors.departmentId ? (
           <p className="mt-2 text-sm text-red-600">{errors.departmentId}</p>
         ) : null}

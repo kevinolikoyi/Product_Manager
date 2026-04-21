@@ -224,7 +224,7 @@ export default function ProjectsPage() {
                   ? 'Chargement des departements...'
                   : backendStatus.error
                     ? `Aucun departement charge. ${backendStatus.error}`
-                    : 'Aucun département disponible dans le workspace actif.'}
+                    : 'Aucun departement disponible dans le workspace actif.'}
               </p>
             ) : null}
           </div>

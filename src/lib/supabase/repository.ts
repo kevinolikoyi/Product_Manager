@@ -1,40 +1,47 @@
 import { getSupabaseBrowserClient } from '@/lib/supabase/client';
 import { getSupabasePublicConfig } from '@/lib/supabase/config';
+import {
+  normalizeDepartments,
+  remapMemberDepartments,
+  remapProjectDepartments,
+} from '@/lib/supabase/departments';
 import type { Department, Finance, Member, Project, Task } from '@/lib/types';
 
 interface WorkspaceRow {
-  id: string;
+  id: number;
   name: string;
   slug: string;
-  owner_id: string;
-}
-
-interface WorkspaceMemberRow {
-  user_id: string;
-  role: Member['role'];
-  department_id: string | null;
 }
 
 interface DepartmentRow {
-  id: string;
+  id: number;
   name: string;
   slug: string;
 }
 
+interface CollaboratorRow {
+  id: number;
+  workspace_id: number;
+  department_id: number | null;
+  full_name: string;
+  email: string | null;
+  role: Member['role'];
+}
+
 interface ProjectRow {
-  id: string;
-  workspace_id: string;
-  department_id: string;
+  id: number;
+  workspace_id: number;
+  department_id: number;
   name: string;
   status: Project['status'];
   progress: number;
-  created_by: string;
+  created_by: number | null;
 }
 
 interface FinanceRow {
-  id: string;
-  workspace_id: string;
-  department_id: string | null;
+  id: number;
+  workspace_id: number;
+  department_id: number | null;
   period_start: string;
   revenue: number;
   expenses: number;
@@ -42,29 +49,24 @@ interface FinanceRow {
 }
 
 interface TaskRow {
-  id: string;
-  workspace_id: string;
-  project_id: string;
+  id: number;
+  workspace_id: number;
+  project_id: number;
   title: string;
   status: Task['status'];
   priority: Task['priority'];
   risk: Task['risk'];
-  assignee_id: string | null;
-  assigned_by: string | null;
+  assignee_id: number | null;
+  assigned_by: number | null;
   due_date: string | null;
   position: number;
-  created_by: string;
-}
-
-interface ProfileRow {
-  id: string;
-  full_name: string | null;
-  email: string | null;
+  created_by: number | null;
 }
 
 interface WorkspaceContext {
   workspace: WorkspaceRow;
   departments: DepartmentRow[];
+  collaborators: CollaboratorRow[];
 }
 
 export interface WorkspaceSnapshot {
@@ -86,9 +88,28 @@ function isMissingRelationError(error: unknown) {
 
   return (
     candidate.code === '42P01' ||
+    candidate.code === '42703' ||
+    candidate.code === 'PGRST204' ||
     candidate.code === 'PGRST205' ||
     candidate.message?.includes('financial_entries') === true
   );
+}
+
+async function resolveSnapshotSection<T>(
+  label: string,
+  loader: Promise<T>,
+  fallback: T,
+) {
+  try {
+    return await loader;
+  } catch (error) {
+    if (!isMissingRelationError(error)) {
+      throw error;
+    }
+
+    console.warn(`[supabase] Snapshot section "${label}" unavailable`, error);
+    return fallback;
+  }
 }
 
 function requireClient() {
@@ -101,6 +122,23 @@ function requireClient() {
   return client;
 }
 
+function stringifyEntityId(value: number) {
+  return String(value);
+}
+
+function parseEntityId(value?: string | number | null) {
+  if (typeof value === 'number' && Number.isInteger(value) && value > 0) {
+    return value;
+  }
+
+  if (typeof value === 'string' && /^\d+$/.test(value)) {
+    const parsed = Number.parseInt(value, 10);
+    return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
+  }
+
+  return null;
+}
+
 async function getWorkspaceContext() {
   const client = requireClient();
   const config = getSupabasePublicConfig();
@@ -111,7 +149,7 @@ async function getWorkspaceContext() {
 
   const { data: workspace, error: workspaceError } = await client
     .from('workspaces')
-    .select('id, name, slug, owner_id')
+    .select('id, name, slug')
     .eq('slug', config.workspaceSlug)
     .maybeSingle();
 
@@ -123,24 +161,37 @@ async function getWorkspaceContext() {
     throw new Error(`Workspace introuvable pour le slug "${config.workspaceSlug}".`);
   }
 
-  const { data: departments, error: departmentsError } = await client
-    .from('departments')
-    .select('id, name, slug')
-    .eq('workspace_id', workspace.id)
-    .order('name', { ascending: true });
+  const [{ data: departments, error: departmentsError }, { data: collaborators, error: collaboratorsError }] =
+    await Promise.all([
+      client
+        .from('departments')
+        .select('id, name, slug')
+        .eq('workspace_id', workspace.id)
+        .order('name', { ascending: true }),
+      client
+        .from('collaborators')
+        .select('id, workspace_id, department_id, full_name, email, role')
+        .eq('workspace_id', workspace.id)
+        .order('full_name', { ascending: true }),
+    ]);
 
   if (departmentsError) {
     throw departmentsError;
   }
 
+  if (collaboratorsError) {
+    throw collaboratorsError;
+  }
+
   return {
     workspace: workspace as WorkspaceRow,
     departments: (departments ?? []) as DepartmentRow[],
+    collaborators: (collaborators ?? []) as CollaboratorRow[],
   } satisfies WorkspaceContext;
 }
 
 function countTasksByProjectId(tasks: TaskRow[]) {
-  const counts = new Map<string, number>();
+  const counts = new Map<number, number>();
 
   for (const task of tasks) {
     counts.set(task.project_id, (counts.get(task.project_id) ?? 0) + 1);
@@ -153,36 +204,30 @@ function mapProjects(rows: ProjectRow[], tasks: TaskRow[]) {
   const taskCountByProjectId = countTasksByProjectId(tasks);
 
   return rows.map((project) => ({
-    id: project.id,
+    id: stringifyEntityId(project.id),
     name: project.name,
-    departmentId: project.department_id,
+    departmentId: stringifyEntityId(project.department_id),
     status: project.status,
     progress: project.progress,
     numberOfTasks: taskCountByProjectId.get(project.id) ?? 0,
   })) satisfies Project[];
 }
 
-function mapMembers(rows: WorkspaceMemberRow[], profiles: ProfileRow[]) {
-  const profileById = new Map(profiles.map((profile) => [profile.id, profile]));
-
+function mapMembers(rows: CollaboratorRow[]) {
   return rows
-    .map((member) => {
-      const profile = profileById.get(member.user_id);
-
-      return {
-        id: member.user_id,
-        name: profile?.full_name || profile?.email || 'Utilisateur sans nom',
-        departmentId: member.department_id ?? '',
-        role: member.role,
-        email: profile?.email ?? undefined,
-      } satisfies Member;
-    })
-    .sort((left, right) => left.name.localeCompare(right.name));
+    .map((collaborator) => ({
+      id: stringifyEntityId(collaborator.id),
+      name: collaborator.full_name,
+      departmentId: collaborator.department_id ? stringifyEntityId(collaborator.department_id) : '',
+      role: collaborator.role,
+      email: collaborator.email ?? undefined,
+    }))
+    .sort((left, right) => left.name.localeCompare(right.name)) satisfies Member[];
 }
 
 function mapFinances(rows: FinanceRow[]) {
   return rows.map((entry) => ({
-    id: entry.id,
+    id: stringifyEntityId(entry.id),
     periodStart: entry.period_start,
     revenue: entry.revenue,
     expenses: entry.expenses,
@@ -192,10 +237,10 @@ function mapFinances(rows: FinanceRow[]) {
 
 function mapTasks(rows: TaskRow[]) {
   return rows.map((task) => ({
-    id: task.id,
+    id: stringifyEntityId(task.id),
     title: task.title,
-    projectId: task.project_id,
-    assigneeId: task.assignee_id ?? undefined,
+    projectId: stringifyEntityId(task.project_id),
+    assigneeId: task.assignee_id ? stringifyEntityId(task.assignee_id) : undefined,
     status: task.status,
     priority: task.priority,
     risk: task.risk,
@@ -203,7 +248,7 @@ function mapTasks(rows: TaskRow[]) {
   })) satisfies Task[];
 }
 
-async function fetchVisibleProjects(workspaceId: string) {
+async function fetchVisibleProjects(workspaceId: number) {
   const client = requireClient();
   const { data, error } = await client
     .from('projects')
@@ -218,21 +263,7 @@ async function fetchVisibleProjects(workspaceId: string) {
   return (data ?? []) as ProjectRow[];
 }
 
-async function fetchWorkspaceMembers(workspaceId: string) {
-  const client = requireClient();
-  const { data, error } = await client
-    .from('workspace_members')
-    .select('user_id, role, department_id')
-    .eq('workspace_id', workspaceId);
-
-  if (error) {
-    throw error;
-  }
-
-  return (data ?? []) as WorkspaceMemberRow[];
-}
-
-async function fetchFinanceEntries(workspaceId: string) {
+async function fetchFinanceEntries(workspaceId: number) {
   const client = requireClient();
   const { data, error } = await client
     .from('financial_entries')
@@ -252,7 +283,7 @@ async function fetchFinanceEntries(workspaceId: string) {
   return (data ?? []) as FinanceRow[];
 }
 
-async function fetchVisibleTasks(workspaceId: string) {
+async function fetchVisibleTasks(workspaceId: number) {
   const client = requireClient();
   const { data, error } = await client
     .from('tasks')
@@ -269,28 +300,24 @@ async function fetchVisibleTasks(workspaceId: string) {
   return (data ?? []) as TaskRow[];
 }
 
-async function fetchProfilesByIds(ids: string[]) {
-  const client = requireClient();
+function resolveProjectDepartmentId(
+  context: WorkspaceContext,
+  project: Project,
+  existing?: ProjectRow | null,
+) {
+  const normalizedDepartments = normalizeDepartments(context.departments);
+  const catalogDepartmentId = normalizedDepartments.databaseDepartmentIdMap.get(
+    project.departmentId,
+  );
 
-  if (ids.length === 0) {
-    return [];
+  if (catalogDepartmentId !== undefined) {
+    return catalogDepartmentId;
   }
 
-  const { data, error } = await client
-    .from('profiles')
-    .select('id, full_name, email')
-    .in('id', ids);
+  const explicitDepartmentId = parseEntityId(project.departmentId);
 
-  if (error) {
-    throw error;
-  }
-
-  return (data ?? []) as ProfileRow[];
-}
-
-function resolveProjectDepartmentId(context: WorkspaceContext, project: Project, existing?: ProjectRow | null) {
-  if (project.departmentId) {
-    return project.departmentId;
+  if (explicitDepartmentId !== null) {
+    return explicitDepartmentId;
   }
 
   if (existing?.department_id) {
@@ -301,15 +328,27 @@ function resolveProjectDepartmentId(context: WorkspaceContext, project: Project,
     return context.departments[0].id;
   }
 
-  throw new Error('La creation de projet exige un departement explicite.');
+  throw new Error(
+    'Le departement selectionne est connu localement mais introuvable dans Supabase.',
+  );
+}
+
+function resolveDefaultCollaboratorId(context: WorkspaceContext) {
+  return context.collaborators[0]?.id ?? null;
 }
 
 async function fetchProjectRowById(projectId: string) {
+  const parsedProjectId = parseEntityId(projectId);
+
+  if (parsedProjectId === null) {
+    return null;
+  }
+
   const client = requireClient();
   const { data, error } = await client
     .from('projects')
     .select('id, workspace_id, department_id, name, status, progress, created_by')
-    .eq('id', projectId)
+    .eq('id', parsedProjectId)
     .maybeSingle();
 
   if (error) {
@@ -320,13 +359,19 @@ async function fetchProjectRowById(projectId: string) {
 }
 
 async function fetchTaskRowById(taskId: string) {
+  const parsedTaskId = parseEntityId(taskId);
+
+  if (parsedTaskId === null) {
+    return null;
+  }
+
   const client = requireClient();
   const { data, error } = await client
     .from('tasks')
     .select(
       'id, workspace_id, project_id, title, status, priority, risk, assignee_id, assigned_by, due_date, position, created_by',
     )
-    .eq('id', taskId)
+    .eq('id', parsedTaskId)
     .maybeSingle();
 
   if (error) {
@@ -336,7 +381,7 @@ async function fetchTaskRowById(taskId: string) {
   return (data ?? null) as TaskRow | null;
 }
 
-async function fetchFinancialEntryByPeriodStart(workspaceId: string, periodStart: string) {
+async function fetchFinancialEntryByPeriodStart(workspaceId: number, periodStart: string) {
   const client = requireClient();
   const { data, error } = await client
     .from('financial_entries')
@@ -357,13 +402,19 @@ async function fetchFinancialEntryByPeriodStart(workspaceId: string, periodStart
   return (data ?? null) as FinanceRow | null;
 }
 
-async function resolveProjectIdById(workspaceId: string, projectId: string) {
+async function resolveProjectIdById(workspaceId: number, projectId: string) {
+  const parsedProjectId = parseEntityId(projectId);
+
+  if (parsedProjectId === null) {
+    throw new Error(`Le projet "${projectId}" est introuvable dans le workspace actif.`);
+  }
+
   const client = requireClient();
   const { data, error } = await client
     .from('projects')
     .select('id')
     .eq('workspace_id', workspaceId)
-    .eq('id', projectId)
+    .eq('id', parsedProjectId)
     .maybeSingle();
 
   if (error) {
@@ -374,7 +425,7 @@ async function resolveProjectIdById(workspaceId: string, projectId: string) {
     throw new Error(`Le projet "${projectId}" est introuvable dans le workspace actif.`);
   }
 
-  return data.id;
+  return data.id as number;
 }
 
 export async function loadWorkspaceSnapshot() {
@@ -384,27 +435,27 @@ export async function loadWorkspaceSnapshot() {
     return null;
   }
 
-  const [projectRows, financeRows, memberRows, taskRows] = await Promise.all([
-    fetchVisibleProjects(context.workspace.id),
-    fetchFinanceEntries(context.workspace.id),
-    fetchWorkspaceMembers(context.workspace.id),
-    fetchVisibleTasks(context.workspace.id),
+  const [projectRows, financeRows, taskRows] = await Promise.all([
+    resolveSnapshotSection('projects', fetchVisibleProjects(context.workspace.id), [] as ProjectRow[]),
+    resolveSnapshotSection(
+      'financial_entries',
+      fetchFinanceEntries(context.workspace.id),
+      [] as FinanceRow[],
+    ),
+    resolveSnapshotSection('tasks', fetchVisibleTasks(context.workspace.id), [] as TaskRow[]),
   ]);
 
-  const profileIds = [
-    ...new Set(
-      memberRows
-        .map((member) => member.user_id)
-        .concat(
-          taskRows
-            .map((task) => task.assignee_id)
-            .filter((value): value is string => Boolean(value)),
-        ),
-    ),
-  ];
-  const profiles = await fetchProfilesByIds(profileIds);
+  const normalizedDepartments = normalizeDepartments(context.departments);
+  const projects = remapProjectDepartments(
+    mapProjects(projectRows, taskRows),
+    normalizedDepartments.departmentIdMap,
+  );
+  const members = remapMemberDepartments(
+    mapMembers(context.collaborators),
+    normalizedDepartments.departmentIdMap,
+  );
 
-  if (context.departments.length === 0) {
+  if (normalizedDepartments.departments.length === 0) {
     const config = getSupabasePublicConfig();
     console.warn('[supabase] Workspace loaded without departments', {
       workspaceSlug: config?.workspaceSlug,
@@ -417,10 +468,10 @@ export async function loadWorkspaceSnapshot() {
   return {
     mode: 'supabase',
     workspaceName: context.workspace.name,
-    departments: context.departments,
+    departments: normalizedDepartments.departments,
     finances: mapFinances(financeRows),
-    members: mapMembers(memberRows, profiles),
-    projects: mapProjects(projectRows, taskRows),
+    members,
+    projects,
     tasks: mapTasks(taskRows),
   } satisfies WorkspaceSnapshot;
 }
@@ -439,7 +490,6 @@ export async function saveFinanceToSupabase(finance: Finance) {
   );
 
   const payload = {
-    id: existingEntry?.id ?? finance.id,
     workspace_id: context.workspace.id,
     department_id: null,
     period_start: finance.periodStart,
@@ -448,9 +498,11 @@ export async function saveFinanceToSupabase(finance: Finance) {
     profit: finance.profit,
   };
 
-  const { error } = await client.from('financial_entries').upsert(payload, {
-    onConflict: 'id',
-  });
+  const query = existingEntry
+    ? client.from('financial_entries').update(payload).eq('id', existingEntry.id)
+    : client.from('financial_entries').insert(payload);
+
+  const { error } = await query;
 
   if (error) {
     throw error;
@@ -469,27 +521,66 @@ export async function saveProjectToSupabase(project: Project) {
   const departmentId = resolveProjectDepartmentId(context, project, existingProject);
 
   const payload = {
-    id: project.id,
     workspace_id: context.workspace.id,
     department_id: departmentId,
     name: project.name.trim(),
     status: project.status,
     progress: project.progress,
-    created_by: existingProject?.created_by ?? context.workspace.owner_id,
+    created_by: existingProject?.created_by ?? resolveDefaultCollaboratorId(context),
   };
 
-  const { error } = await client.from('projects').upsert(payload, {
-    onConflict: 'id',
-  });
+  const query = existingProject
+    ? client.from('projects').update(payload).eq('id', existingProject.id)
+    : client.from('projects').insert(payload);
+
+  const { error } = await query;
 
   if (error) {
     throw error;
   }
+
+  const persistedProject = existingProject
+    ? await fetchProjectRowById(stringifyEntityId(existingProject.id))
+    : await client
+        .from('projects')
+        .select('id, workspace_id, department_id, name, status, progress, created_by')
+        .eq('workspace_id', context.workspace.id)
+        .eq('name', project.name.trim())
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+        .then(({ data, error: selectError }) => {
+          if (selectError) {
+            throw selectError;
+          }
+
+          if (!data) {
+            throw new Error(
+              "Le projet n'a pas ete confirme par Supabase. Verifiez la connexion et les policies.",
+            );
+          }
+
+          return data as ProjectRow;
+        });
+
+  if (!persistedProject) {
+    throw new Error(
+      "Le projet n'a pas ete confirme par Supabase. Verifiez la connexion et les policies.",
+    );
+  }
+
+  return mapProjects([persistedProject], [])[0];
 }
 
 export async function deleteProjectFromSupabase(projectId: string) {
+  const parsedProjectId = parseEntityId(projectId);
+
+  if (parsedProjectId === null) {
+    throw new Error(`Le projet "${projectId}" est introuvable.`);
+  }
+
   const client = requireClient();
-  const { error } = await client.from('projects').delete().eq('id', projectId);
+  const { error } = await client.from('projects').delete().eq('id', parsedProjectId);
 
   if (error) {
     throw error;
@@ -506,28 +597,31 @@ export async function saveTaskToSupabase(task: Task) {
   const client = requireClient();
   const existingTask = await fetchTaskRowById(task.id);
   const projectId = await resolveProjectIdById(context.workspace.id, task.projectId);
+  const assigneeId = parseEntityId(task.assigneeId ?? null);
+  const defaultCollaboratorId = resolveDefaultCollaboratorId(context);
 
   const payload = {
-    id: task.id,
     workspace_id: context.workspace.id,
     project_id: projectId,
     title: task.title.trim(),
     status: task.status,
     priority: task.priority,
     risk: task.risk,
-    assignee_id: task.assigneeId ?? null,
+    assignee_id: assigneeId,
     assigned_by:
-      existingTask?.assignee_id !== (task.assigneeId ?? null) && task.assigneeId
-        ? context.workspace.owner_id
-        : existingTask?.assigned_by ?? context.workspace.owner_id,
+      existingTask?.assignee_id !== assigneeId && assigneeId
+        ? defaultCollaboratorId
+        : existingTask?.assigned_by ?? defaultCollaboratorId,
     due_date: task.dueDate || null,
     position: existingTask?.position ?? 1000,
-    created_by: existingTask?.created_by ?? context.workspace.owner_id,
+    created_by: existingTask?.created_by ?? defaultCollaboratorId,
   };
 
-  const { error } = await client.from('tasks').upsert(payload, {
-    onConflict: 'id',
-  });
+  const query = existingTask
+    ? client.from('tasks').update(payload).eq('id', existingTask.id)
+    : client.from('tasks').insert(payload);
+
+  const { error } = await query;
 
   if (error) {
     throw error;
@@ -535,8 +629,14 @@ export async function saveTaskToSupabase(task: Task) {
 }
 
 export async function deleteTaskFromSupabase(taskId: string) {
+  const parsedTaskId = parseEntityId(taskId);
+
+  if (parsedTaskId === null) {
+    throw new Error(`La tache "${taskId}" est introuvable.`);
+  }
+
   const client = requireClient();
-  const { error } = await client.from('tasks').delete().eq('id', taskId);
+  const { error } = await client.from('tasks').delete().eq('id', parsedTaskId);
 
   if (error) {
     throw error;
@@ -544,6 +644,12 @@ export async function deleteTaskFromSupabase(taskId: string) {
 }
 
 export async function updateTaskStatusInSupabase(taskId: string, status: Task['status']) {
+  const parsedTaskId = parseEntityId(taskId);
+
+  if (parsedTaskId === null) {
+    throw new Error(`La tache "${taskId}" est introuvable.`);
+  }
+
   const client = requireClient();
   const { error } = await client
     .from('tasks')
@@ -551,7 +657,7 @@ export async function updateTaskStatusInSupabase(taskId: string, status: Task['s
       status,
       status_updated_at: new Date().toISOString(),
     })
-    .eq('id', taskId);
+    .eq('id', parsedTaskId);
 
   if (error) {
     throw error;
@@ -559,16 +665,16 @@ export async function updateTaskStatusInSupabase(taskId: string, status: Task['s
 }
 
 export async function addTaskCommentInSupabase(taskId: string, body: string) {
-  const context = await getWorkspaceContext();
+  const parsedTaskId = parseEntityId(taskId);
 
-  if (!context) {
-    throw new Error("Supabase n'est pas configure.");
+  if (parsedTaskId === null) {
+    throw new Error(`La tache "${taskId}" est introuvable.`);
   }
 
   const client = requireClient();
   const { error } = await client.from('task_comments').insert({
-    task_id: taskId,
-    author_id: context.workspace.owner_id,
+    task_id: parsedTaskId,
+    author_id: null,
     body: body.trim(),
   });
 

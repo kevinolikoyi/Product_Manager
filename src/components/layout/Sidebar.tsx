@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ChevronRight } from "lucide-react";
 import { navigationItems } from "./navigation";
 import { cn } from "@/lib/utils";
 import { useProjects, useTasks } from "@/lib/store";
@@ -23,9 +22,6 @@ export default function Sidebar({
   const { projects } = useProjects();
 
   const mainItems = navigationItems.filter((item) => item.section === "navigation");
-  const secondaryItems = navigationItems.filter(
-    (item) => item.section === "settings",
-  );
 
   return (
     <>
@@ -122,70 +118,73 @@ export default function Sidebar({
             })}
           </div>
 
-          <div className="space-y-1.5">
-            <p className="px-3 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-              Espace
-            </p>
-            {secondaryItems.map((item) => {
-              const Icon = item.icon;
-              const isActive = pathname === item.href;
+          {/*
+            <div className="space-y-1.5">
+              <p className="px-3 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                Espace
+              </p>
+              {secondaryItems.map((item) => {
+                const Icon = item.icon;
+                const isActive = pathname === item.href;
 
-              return (
-                <Link
-                  key={`${item.href}-${item.label}`}
-                  href={item.href}
-                  onClick={onClose}
-                  title={compactDesktop ? item.label : undefined}
-                  className={cn(
-                    "flex items-center gap-3 rounded-2xl px-3 py-3 text-sm transition",
-                    compactDesktop && "md:justify-center md:px-2",
-                    isActive
-                      ? "bg-indigo-500/18 text-indigo-100"
-                      : "text-slate-400 hover:bg-white/5 hover:text-slate-100",
-                  )}
-                >
-                  <span
+                return (
+                  <Link
+                    key={`${item.href}-${item.label}`}
+                    href={item.href}
+                    onClick={onClose}
+                    title={compactDesktop ? item.label : undefined}
                     className={cn(
-                      "grid h-9 w-9 place-items-center rounded-xl border",
+                      "flex items-center gap-3 rounded-2xl px-3 py-3 text-sm transition",
+                      compactDesktop && "md:justify-center md:px-2",
                       isActive
-                        ? "border-indigo-400/25 bg-indigo-500/20 text-indigo-200"
-                        : "border-white/8 bg-white/4 text-slate-500",
+                        ? "bg-indigo-500/18 text-indigo-100"
+                        : "text-slate-400 hover:bg-white/5 hover:text-slate-100",
                     )}
                   >
-                    <Icon className="h-4 w-4" />
-                  </span>
-                  <span className={cn("flex-1 font-medium", compactDesktop && "md:hidden")}>
-                    {item.label}
-                  </span>
-                </Link>
-              );
-            })}
-          </div>
+                    <span
+                      className={cn(
+                        "grid h-9 w-9 place-items-center rounded-xl border",
+                        isActive
+                          ? "border-indigo-400/25 bg-indigo-500/20 text-indigo-200"
+                          : "border-white/8 bg-white/4 text-slate-500",
+                      )}
+                    >
+                      <Icon className="h-4 w-4" />
+                    </span>
+                    <span className={cn("flex-1 font-medium", compactDesktop && "md:hidden")}>
+                      {item.label}
+                    </span>
+                  </Link>
+                );
+              })}
+            </div>
+          */}
         </nav>
-
-        <div className="border-t border-white/8 p-3">
-          <div className="rounded-3xl bg-white/4 p-3">
-            <div
-              className={cn(
-                "flex items-center gap-3",
-                compactDesktop && "md:justify-center",
-              )}
-            >
-              <div className="grid h-10 w-10 place-items-center rounded-full bg-gradient-to-br from-indigo-500 to-violet-500 text-sm font-semibold text-white">
-                AM
+        {/*
+          <div className="border-t border-white/8 p-3">
+            <div className="rounded-3xl bg-white/4 p-3">
+              <div
+                className={cn(
+                  "flex items-center gap-3",
+                  compactDesktop && "md:justify-center",
+                )}
+              >
+                <div className="grid h-10 w-10 place-items-center rounded-full bg-gradient-to-br from-indigo-500 to-violet-500 text-sm font-semibold text-white">
+                  AM
+                </div>
+                <div className={cn("min-w-0 flex-1", compactDesktop && "md:hidden")}>
+                  <p className="truncate text-sm font-medium text-slate-100">
+                    Alice Martin
+                  </p>
+                  <p className="text-xs text-slate-400">Responsable operations</p>
+                </div>
+                <ChevronRight
+                  className={cn("h-4 w-4 text-slate-500", compactDesktop && "md:hidden")}
+                />
               </div>
-              <div className={cn("min-w-0 flex-1", compactDesktop && "md:hidden")}>
-                <p className="truncate text-sm font-medium text-slate-100">
-                  Alice Martin
-                </p>
-                <p className="text-xs text-slate-400">Responsable operations</p>
-              </div>
-              <ChevronRight
-                className={cn("h-4 w-4 text-slate-500", compactDesktop && "md:hidden")}
-              />
             </div>
           </div>
-        </div>
+        */}
       </aside>
     </>
   );

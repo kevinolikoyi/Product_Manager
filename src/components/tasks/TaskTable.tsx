@@ -141,7 +141,7 @@ export default function TaskTable({ tasks, onEdit, onDelete }: TaskTableProps) {
                 Statut
               </th>
               <th className="px-4 py-4 text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
-                Priorite
+                Priorité
               </th>
               <th className="px-4 py-4 text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
                 Risque

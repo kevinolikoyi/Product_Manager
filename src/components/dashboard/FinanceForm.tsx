@@ -47,7 +47,7 @@ export default function FinanceForm({ onClose, finance = null }: FinanceFormProp
     }
 
     const newFinance: Finance = {
-      id: finance?.id ?? crypto.randomUUID(),
+      id: finance?.id ?? '',
       periodStart: selectedPeriodStart,
       revenue: Number.parseInt(revenue, 10) || 0,
       expenses: Number.parseInt(expenses, 10) || 0,

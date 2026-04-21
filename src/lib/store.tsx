@@ -11,15 +11,16 @@ import {
 } from 'react';
 import {
   deleteProjectFromSupabase,
-  saveFinanceToSupabase,
   deleteTaskFromSupabase,
   isSupabaseRemoteEnabled,
   loadWorkspaceSnapshot,
+  saveFinanceToSupabase,
   saveProjectToSupabase,
   saveTaskToSupabase,
   updateTaskStatusInSupabase,
   type WorkspaceSnapshot,
 } from '@/lib/supabase/repository';
+import { getDepartmentCatalog } from '@/lib/departments';
 import type { Department, Finance, Member, Project, Task } from '@/lib/types';
 
 export interface WorkspacePreferences {
@@ -46,14 +47,6 @@ export interface StoreState {
   backendStatus: BackendStatus;
 }
 
-type AddTask = { type: 'ADD_TASK'; payload: Task };
-type UpdateTask = { type: 'UPDATE_TASK'; payload: Task };
-type DeleteTask = { type: 'DELETE_TASK'; payload: string };
-type UpdateTaskStatus = { type: 'UPDATE_TASK_STATUS'; payload: { id: string; status: Task['status'] } };
-type AddProject = { type: 'ADD_PROJECT'; payload: Project };
-type UpdateProject = { type: 'UPDATE_PROJECT'; payload: Project };
-type DeleteProject = { type: 'DELETE_PROJECT'; payload: string };
-type UpdateFinances = { type: 'UPDATE_FINANCES'; payload: Finance[] };
 type UpdatePreferences = { type: 'UPDATE_PREFERENCES'; payload: Partial<WorkspacePreferences> };
 type HydratePreferences = { type: 'HYDRATE_PREFERENCES'; payload: WorkspacePreferences };
 type HydrateWorkspace = { type: 'HYDRATE_WORKSPACE'; payload: WorkspaceSnapshot };
@@ -61,14 +54,6 @@ type SetBackendStatus = { type: 'SET_BACKEND_STATUS'; payload: BackendStatus };
 type ResetPreferences = { type: 'RESET_PREFERENCES' };
 
 type Action =
-  | AddTask
-  | UpdateTask
-  | DeleteTask
-  | UpdateTaskStatus
-  | AddProject
-  | UpdateProject
-  | DeleteProject
-  | UpdateFinances
   | UpdatePreferences
   | HydratePreferences
   | HydrateWorkspace
@@ -84,7 +69,7 @@ export const defaultWorkspacePreferences: WorkspacePreferences = {
   showInsights: true,
 };
 
-const initialBackendStatus: BackendStatus = {
+const defaultBackendStatus: BackendStatus = {
   configured: false,
   mode: 'mock',
   loading: true,
@@ -129,54 +114,14 @@ const initialState: StoreState = {
   tasks: [],
   projects: [],
   finances: [],
-  departments: [],
+  departments: getDepartmentCatalog(),
   members: [],
   preferences: defaultWorkspacePreferences,
-  backendStatus: initialBackendStatus,
+  backendStatus: defaultBackendStatus,
 };
 
 const storeReducer = (state: StoreState, action: Action): StoreState => {
   switch (action.type) {
-    case 'ADD_TASK': {
-      const tasks = [action.payload, ...state.tasks];
-      return { ...state, tasks, projects: syncProjectTaskCounts(state.projects, tasks) };
-    }
-    case 'UPDATE_TASK': {
-      const tasks = state.tasks.map((task) =>
-        task.id === action.payload.id ? action.payload : task,
-      );
-      return { ...state, tasks, projects: syncProjectTaskCounts(state.projects, tasks) };
-    }
-    case 'DELETE_TASK': {
-      const tasks = state.tasks.filter((task) => task.id !== action.payload);
-      return { ...state, tasks, projects: syncProjectTaskCounts(state.projects, tasks) };
-    }
-    case 'UPDATE_TASK_STATUS': {
-      const tasks = state.tasks.map((task) =>
-        task.id === action.payload.id ? { ...task, status: action.payload.status } : task,
-      );
-      return { ...state, tasks };
-    }
-    case 'ADD_PROJECT': {
-      const projects = syncProjectTaskCounts([action.payload, ...state.projects], state.tasks);
-      return { ...state, projects };
-    }
-    case 'UPDATE_PROJECT': {
-      const projects = syncProjectTaskCounts(
-        state.projects.map((project) =>
-          project.id === action.payload.id ? action.payload : project,
-        ),
-        state.tasks,
-      );
-      return { ...state, projects };
-    }
-    case 'DELETE_PROJECT': {
-      const tasks = state.tasks.filter((task) => task.projectId !== action.payload);
-      const projects = state.projects.filter((project) => project.id !== action.payload);
-      return { ...state, tasks, projects: syncProjectTaskCounts(projects, tasks) };
-    }
-    case 'UPDATE_FINANCES':
-      return { ...state, finances: sortFinances(action.payload) };
     case 'UPDATE_PREFERENCES':
       return {
         ...state,
@@ -209,6 +154,36 @@ const StoreContext = createContext<{
   state: StoreState;
   dispatch: Dispatch<Action>;
 } | null>(null);
+
+async function syncWorkspaceFromSupabase(dispatch: Dispatch<Action>) {
+  const snapshot = await loadWorkspaceSnapshot();
+
+  if (!snapshot) {
+    throw new Error("Supabase n'est pas configure.");
+  }
+
+  dispatch({ type: 'HYDRATE_WORKSPACE', payload: snapshot });
+  dispatch({
+    type: 'SET_BACKEND_STATUS',
+    payload: {
+      configured: true,
+      mode: 'supabase',
+      loading: false,
+      error: null,
+    },
+  });
+
+  return snapshot;
+}
+
+function ensureSupabaseMutationAllowed(state: StoreState) {
+  if (state.backendStatus.mode !== 'supabase') {
+    throw new Error(
+      state.backendStatus.error ??
+        'Une connexion Supabase active est requise pour modifier les donnees.',
+    );
+  }
+}
 
 export const StoreProvider = ({ children }: { children: ReactNode }) => {
   const [state, dispatch] = useReducer(storeReducer, initialState);
@@ -251,7 +226,7 @@ export const StoreProvider = ({ children }: { children: ReactNode }) => {
           configured: false,
           mode: 'mock',
           loading: false,
-          error: null,
+          error: "Supabase n'est pas configure.",
         },
       });
       return () => {
@@ -269,46 +244,31 @@ export const StoreProvider = ({ children }: { children: ReactNode }) => {
       },
     });
 
-    void loadWorkspaceSnapshot()
-      .then((snapshot) => {
-        if (cancelled || !snapshot) {
-          return;
-        }
+    void syncWorkspaceFromSupabase(dispatch).catch((error) => {
+      if (cancelled) {
+        return;
+      }
 
-        dispatch({ type: 'HYDRATE_WORKSPACE', payload: snapshot });
-        dispatch({
-          type: 'SET_BACKEND_STATUS',
-          payload: {
-            configured: true,
-            mode: 'supabase',
-            loading: false,
-            error: null,
-          },
-        });
-      })
-      .catch((error) => {
-        if (cancelled) {
-          return;
-        }
-
-        dispatch({
-          type: 'SET_BACKEND_STATUS',
-          payload: {
-            configured: true,
-            mode: 'mock',
-            loading: false,
-            error:
-              error instanceof Error
-                ? error.message
-                : 'Connexion Supabase indisponible. Le mode local reste actif.',
-          },
-        });
+      dispatch({
+        type: 'SET_BACKEND_STATUS',
+        payload: {
+          configured: true,
+          mode: 'mock',
+          loading: false,
+          error:
+            error instanceof Error ? error.message : 'Connexion Supabase indisponible.',
+        },
       });
+    });
 
     return () => {
       cancelled = true;
     };
   }, []);
+
+  if (!preferencesReady) {
+    return null;
+  }
 
   return <StoreContext.Provider value={{ state, dispatch }}>{children}</StoreContext.Provider>;
 };
@@ -326,30 +286,21 @@ export const useTasks = () => {
   const { state, dispatch } = useStore();
 
   const saveTask = async (task: Task) => {
-    if (state.backendStatus.mode === 'supabase') {
-      await saveTaskToSupabase(task);
-    }
-
-    dispatch({
-      type: state.tasks.some((currentTask) => currentTask.id === task.id) ? 'UPDATE_TASK' : 'ADD_TASK',
-      payload: task,
-    });
+    ensureSupabaseMutationAllowed(state);
+    await saveTaskToSupabase(task);
+    await syncWorkspaceFromSupabase(dispatch);
   };
 
   const deleteTaskById = async (taskId: string) => {
-    if (state.backendStatus.mode === 'supabase') {
-      await deleteTaskFromSupabase(taskId);
-    }
-
-    dispatch({ type: 'DELETE_TASK', payload: taskId });
+    ensureSupabaseMutationAllowed(state);
+    await deleteTaskFromSupabase(taskId);
+    await syncWorkspaceFromSupabase(dispatch);
   };
 
   const updateTaskStatus = async (taskId: string, status: Task['status']) => {
-    if (state.backendStatus.mode === 'supabase') {
-      await updateTaskStatusInSupabase(taskId, status);
-    }
-
-    dispatch({ type: 'UPDATE_TASK_STATUS', payload: { id: taskId, status } });
+    ensureSupabaseMutationAllowed(state);
+    await updateTaskStatusInSupabase(taskId, status);
+    await syncWorkspaceFromSupabase(dispatch);
   };
 
   return {
@@ -365,24 +316,16 @@ export const useProjects = () => {
   const { state, dispatch } = useStore();
 
   const saveProject = async (project: Project) => {
-    if (state.backendStatus.mode === 'supabase') {
-      await saveProjectToSupabase(project);
-    }
-
-    dispatch({
-      type: state.projects.some((currentProject) => currentProject.id === project.id)
-        ? 'UPDATE_PROJECT'
-        : 'ADD_PROJECT',
-      payload: project,
-    });
+    ensureSupabaseMutationAllowed(state);
+    const persistedProject = await saveProjectToSupabase(project);
+    await syncWorkspaceFromSupabase(dispatch);
+    return persistedProject;
   };
 
   const deleteProjectById = async (projectId: string) => {
-    if (state.backendStatus.mode === 'supabase') {
-      await deleteProjectFromSupabase(projectId);
-    }
-
-    dispatch({ type: 'DELETE_PROJECT', payload: projectId });
+    ensureSupabaseMutationAllowed(state);
+    await deleteProjectFromSupabase(projectId);
+    await syncWorkspaceFromSupabase(dispatch);
   };
 
   return {
@@ -397,15 +340,9 @@ export const useFinances = () => {
   const { state, dispatch } = useStore();
 
   const saveFinance = async (finance: Finance) => {
-    if (state.backendStatus.mode === 'supabase') {
-      await saveFinanceToSupabase(finance);
-    }
-
-    const nextFinances = state.finances.some((entry) => entry.id === finance.id)
-      ? state.finances.map((entry) => (entry.id === finance.id ? finance : entry))
-      : [...state.finances, finance];
-
-    dispatch({ type: 'UPDATE_FINANCES', payload: nextFinances });
+    ensureSupabaseMutationAllowed(state);
+    await saveFinanceToSupabase(finance);
+    await syncWorkspaceFromSupabase(dispatch);
   };
 
   return { finances: state.finances, dispatch, saveFinance };
@@ -462,12 +399,14 @@ export const useMemberDirectory = () => {
   const getMemberInitials = (memberId?: string) => {
     const name = getMemberName(memberId);
 
-    return name
-      .split(/\s+/)
-      .filter(Boolean)
-      .slice(0, 2)
-      .map((part) => part[0]?.toUpperCase() ?? '')
-      .join('') || 'NA';
+    return (
+      name
+        .split(/\s+/)
+        .filter(Boolean)
+        .slice(0, 2)
+        .map((part) => part[0]?.toUpperCase() ?? '')
+        .join('') || 'NA'
+    );
   };
 
   return {
@@ -475,4 +414,3 @@ export const useMemberDirectory = () => {
     getMemberInitials,
   };
 };
-

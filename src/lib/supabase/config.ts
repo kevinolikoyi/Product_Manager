@@ -4,22 +4,23 @@ export interface SupabasePublicConfig {
   workspaceSlug: string;
 }
 
-function readEnv(
-  name:
-    | "NEXT_PUBLIC_SUPABASE_URL"
-    | "NEXT_PUBLIC_SUPABASE_ANON_KEY"
-    | "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY"
-    | "NEXT_PUBLIC_SUPABASE_WORKSPACE_SLUG",
-) {
-  return process.env[name]?.trim() ?? "";
+function readSupabasePublicEnv() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim() ?? "";
+  const publishableKey =
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY?.trim() ?? "";
+  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim() ?? "";
+  const workspaceSlug =
+    process.env.NEXT_PUBLIC_SUPABASE_WORKSPACE_SLUG?.trim() ?? "";
+
+  return {
+    url,
+    anonKey: publishableKey || anonKey,
+    workspaceSlug,
+  };
 }
 
 export function getSupabasePublicConfig(): SupabasePublicConfig | null {
-  const url = readEnv("NEXT_PUBLIC_SUPABASE_URL");
-  const anonKey =
-    readEnv("NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY") ||
-    readEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY");
-  const workspaceSlug = readEnv("NEXT_PUBLIC_SUPABASE_WORKSPACE_SLUG");
+  const { url, anonKey, workspaceSlug } = readSupabasePublicEnv();
 
   if (!url || !anonKey || !workspaceSlug) {
     return null;

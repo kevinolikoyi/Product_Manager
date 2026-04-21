@@ -11,7 +11,6 @@ select
 from target_workspace
 cross join (
   values
-    ('Direction des operations', 'direction-operations'),
     ('Secretariat Administratif', 'secretariat-administratif'),
     ('Maintenance et Reparation', 'technique-maintenance-reparation'),
     ('Conception logicielle et Design', 'technique-conception-logicielle-design'),

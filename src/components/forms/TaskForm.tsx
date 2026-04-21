@@ -21,16 +21,18 @@ interface TaskFormProps {
 
 export default function TaskForm({ task, onClose, onSuccess }: TaskFormProps) {
   const { saveTask } = useTasks();
+  const { saveProject } = useProjects();
   const backendStatus = useBackendStatus();
   const { departments } = useDepartments();
   const { members } = useMembers();
   const { projects } = useProjects();
-  const initialProject = task ? projects.find((project) => project.id === task.projectId) : null;
+  const otherProjectValue = '__other__';
 
   const [formData, setFormData] = useState({
     title: task?.title || '',
-    departmentId: initialProject?.departmentId || '',
+    departmentId: '',
     projectId: task?.projectId || '',
+    newProjectName: '',
     assigneeId: task?.assigneeId || '',
     status: task?.status || 'todo',
     priority: task?.priority || 'medium',
@@ -43,18 +45,33 @@ export default function TaskForm({ task, onClose, onSuccess }: TaskFormProps) {
 
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const taskProject = task ? projects.find((project) => project.id === task.projectId) : null;
+  const effectiveDepartmentId = formData.departmentId || taskProject?.departmentId || '';
   const filteredProjects = projects.filter((project) =>
-    formData.departmentId ? project.departmentId === formData.departmentId : true,
+    effectiveDepartmentId ? project.departmentId === effectiveDepartmentId : true,
   );
-  const projectOptions = filteredProjects.map((project) => ({
-    value: project.id,
-    label: project.name,
-  }));
+  const effectiveProjectId =
+    formData.projectId === otherProjectValue
+      ? otherProjectValue
+      : formData.projectId && filteredProjects.some((project) => project.id === formData.projectId)
+        ? formData.projectId
+        : task?.projectId && filteredProjects.some((project) => project.id === task.projectId)
+          ? task.projectId
+          : filteredProjects.length === 1
+            ? filteredProjects[0].id
+            : '';
+  const projectOptions = [
+    ...filteredProjects.map((project) => ({
+      value: project.id,
+      label: project.name,
+    })),
+    { value: otherProjectValue, label: 'Autre' },
+  ];
   const selectableMembers =
     backendStatus.configured && backendStatus.mode !== 'supabase' ? [] : members;
   const memberOptions = selectableMembers
     .filter((member) =>
-      formData.departmentId ? member.departmentId === formData.departmentId : true,
+      effectiveDepartmentId ? member.departmentId === effectiveDepartmentId : true,
     )
     .map((member) => ({
       value: member.id,
@@ -65,8 +82,13 @@ export default function TaskForm({ task, onClose, onSuccess }: TaskFormProps) {
     const nextErrors: Record<string, string> = {};
 
     if (!formData.title.trim()) nextErrors.title = 'Titre requis';
-    if (!formData.departmentId) nextErrors.departmentId = 'Departement requis';
-    if (!formData.projectId) nextErrors.project = 'Projet requis';
+    if (!effectiveDepartmentId) nextErrors.departmentId = 'Departement requis';
+    if (!effectiveProjectId) {
+      nextErrors.project = 'Projet requis';
+    }
+    if (effectiveProjectId === otherProjectValue && !formData.newProjectName.trim()) {
+      nextErrors.newProjectName = 'Nom du projet requis';
+    }
     if (formData.dueDate && new Date(formData.dueDate) <= today) {
       nextErrors.dueDate = 'Date limite dans le passe';
     }
@@ -80,11 +102,35 @@ export default function TaskForm({ task, onClose, onSuccess }: TaskFormProps) {
     if (!validate()) return;
     setSubmitError(null);
 
-    const id = task?.id || crypto.randomUUID();
+    let projectId = effectiveProjectId;
+
+    if (effectiveProjectId === otherProjectValue) {
+      try {
+        const persistedProject = await saveProject({
+          id: '',
+          name: formData.newProjectName.trim(),
+          departmentId: effectiveDepartmentId,
+          status: 'active',
+          progress: 0,
+          numberOfTasks: 0,
+        });
+
+        projectId = persistedProject.id;
+      } catch (error) {
+        setSubmitError(
+          error instanceof Error
+            ? error.message
+            : "Echec d'enregistrement du projet.",
+        );
+        return;
+      }
+    }
+
+    const id = task?.id || '';
     const newTask: Task = {
       id,
       title: formData.title,
-      projectId: formData.projectId,
+      projectId,
       assigneeId: formData.assigneeId || undefined,
       status: formData.status,
       priority: formData.priority,
@@ -122,21 +168,37 @@ export default function TaskForm({ task, onClose, onSuccess }: TaskFormProps) {
             value: department.id,
             label: department.name,
           }))}
-          value={formData.departmentId}
+          value={effectiveDepartmentId}
           onChange={(value) =>
             setFormData((current) => ({
               ...current,
               departmentId: value,
               projectId: projects.some(
                 (project) =>
-                  project.id === current.projectId && project.departmentId === value,
+                  project.id === effectiveProjectId && project.departmentId === value,
               )
-                ? current.projectId
+                ? effectiveProjectId
                 : '',
+              newProjectName:
+                projects.some(
+                  (project) =>
+                    project.id === effectiveProjectId && project.departmentId === value,
+                ) || effectiveProjectId === otherProjectValue
+                  ? current.newProjectName
+                  : '',
             }))
           }
           placeholder="Selectionnez un departement"
         />
+        {departments.length === 0 ? (
+          <p className="mt-1 text-xs text-slate-500">
+            {backendStatus.loading
+              ? 'Chargement des departements...'
+              : backendStatus.error
+                ? `Departements indisponibles. ${backendStatus.error}`
+                : 'Aucun departement disponible dans le workspace actif.'}
+          </p>
+        ) : null}
         {errors.departmentId ? (
           <p className="mt-1 text-sm text-red-600">{errors.departmentId}</p>
         ) : null}
@@ -146,12 +208,40 @@ export default function TaskForm({ task, onClose, onSuccess }: TaskFormProps) {
         <label className="mb-1 block text-sm font-medium text-gray-700">Projet</label>
         <SelectField
           options={projectOptions}
-          value={formData.projectId}
+          value={effectiveProjectId}
           onChange={(value) => setFormData({ ...formData, projectId: value })}
           placeholder="Selectionnez un projet"
         />
+        <p className="mt-1 text-xs text-slate-500">
+          {!effectiveDepartmentId
+            ? "Selectionnez d'abord un departement."
+            : filteredProjects.length === 0
+              ? "Aucun projet dans ce departement. Choisissez 'Autre' pour en creer un."
+              : filteredProjects.length === 1
+                ? 'Le projet deja cree pour ce departement a ete selectionne automatiquement.'
+              : `${filteredProjects.length} projet(s) disponible(s) dans ce departement.`}
+        </p>
         {errors.project ? <p className="mt-1 text-sm text-red-600">{errors.project}</p> : null}
       </div>
+
+      {effectiveProjectId === otherProjectValue ? (
+        <div>
+          <label className="mb-1 block text-sm font-medium text-gray-700">
+            Nom du nouveau projet
+          </label>
+          <Input
+            value={formData.newProjectName}
+            onChange={(event) =>
+              setFormData({ ...formData, newProjectName: event.target.value })
+            }
+            className="w-full"
+            placeholder="Entrez le nom du projet"
+          />
+          {errors.newProjectName ? (
+            <p className="mt-1 text-sm text-red-600">{errors.newProjectName}</p>
+          ) : null}
+        </div>
+      ) : null}
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <div>
@@ -164,10 +254,14 @@ export default function TaskForm({ task, onClose, onSuccess }: TaskFormProps) {
           />
           <p className="mt-1 text-xs text-slate-500">
             {backendStatus.mode === 'supabase'
-              ? 'Collaborateurs charges depuis le workspace Supabase.'
+              ? memberOptions.length > 0
+                ? 'Collaborateurs charges depuis le workspace Supabase.'
+                : effectiveDepartmentId
+                  ? 'Aucun collaborateur rattache a ce departement.'
+                  : 'Selectionnez un departement pour filtrer les collaborateurs.'
               : backendStatus.configured
-                ? 'Connectez une session Supabase pour charger les collaborateurs reels.'
-                : 'Liste locale de demonstration active.'}
+                ? 'Connexion Supabase requise pour charger les collaborateurs reels.'
+                : "Supabase n'est pas configure."}
           </p>
         </div>
         <div>

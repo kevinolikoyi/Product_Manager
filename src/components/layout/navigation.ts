@@ -27,7 +27,7 @@ export const navigationItems: NavigationItem[] = [
     section: "navigation",
   },
   {
-    label: "Taches",
+    label: "Tâches",
     href: "/tasks",
     icon: ListTodo,
     section: "navigation",
@@ -50,7 +50,7 @@ export const pageMetadata: Record<
     eyebrow: "Vue d'ensemble",
   },
   "/tasks": {
-    title: "Taches",
+    title: "Tâches",
     description: "Suivi des priorites, risques et echeances de livraison.",
     eyebrow: "Execution",
   },
@@ -61,7 +61,7 @@ export const pageMetadata: Record<
   },
   "/kanban": {
     title: "Kanban",
-    description: "Pilotage visuel des taches avec drag-and-drop entre les statuts.",
+    description: "Pilotage visuel des Tâches avec drag-and-drop entre les statuts.",
     eyebrow: "Workflow",
   },
 };

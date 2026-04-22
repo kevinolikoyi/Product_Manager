@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import {
-  AlertTriangle,
   Flame,
   ListTodo,
   Plus,
@@ -25,7 +24,6 @@ import {
   formatShortDate,
   getTaskPriorityScore,
   getTodayIsoDate,
-  isTaskBlocked,
   isTaskComplete,
   isTaskOverdue,
   priorityLabels,
@@ -33,14 +31,13 @@ import {
 } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 
-type Filter = "all" | "overdue" | "today" | "high_priority" | "blocked";
+type Filter = "all" | "overdue" | "today" | "high_priority";
 
 const filterLabels: Record<Filter, string> = {
   all: "Toutes",
   overdue: "En retard",
   today: "Aujourd'hui",
   high_priority: "Haute priorite",
-  blocked: "Bloquees",
 };
 
 export default function TasksPage() {
@@ -58,7 +55,6 @@ export default function TasksPage() {
     (task) => task.dueDate === today && !isTaskComplete(task),
   );
   const highPriorityTasks = tasks.filter((task) => task.priority === "high");
-  const blockedTasks = tasks.filter((task) => isTaskBlocked(task));
 
   const filteredTasks = [...tasks]
     .filter((task) => {
@@ -69,8 +65,6 @@ export default function TasksPage() {
           return task.dueDate === today && !isTaskComplete(task);
         case "high_priority":
           return task.priority === "high";
-        case "blocked":
-          return isTaskBlocked(task);
         default:
           return true;
       }
@@ -105,7 +99,7 @@ export default function TasksPage() {
   };
 
   const handleDeleteTask = async (id: string) => {
-    if (!confirm("Voulez-vous vraiment supprimer cette tache ?")) {
+    if (!confirm("Voulez-vous vraiment supprimer cette tâche ?")) {
       return;
     }
 
@@ -115,7 +109,7 @@ export default function TasksPage() {
       window.alert(
         error instanceof Error
           ? error.message
-          : "Suppression impossible pour cette tache.",
+          : "Suppression impossible pour cette tâche.",
       );
     }
   };
@@ -132,13 +126,13 @@ export default function TasksPage() {
 
   return (
     <Layout
-      title="Taches"
+      title="tâches"
       eyebrow="Execution"
       description="Pilotage des echeances, des risques et des priorites d'execution."
       actions={
         <div className="flex flex-wrap items-center gap-2">
           <div className="rounded-full border border-slate-200/80 bg-white/85 px-4 py-2 text-sm font-medium text-slate-700 shadow-sm">
-            {filteredTasks.length} taches visibles
+            {filteredTasks.length} tâches visibles
           </div>
           <Button type="button" onClick={handleAddTask}>
             <Plus className="mr-1.5 h-4 w-4" />
@@ -148,7 +142,7 @@ export default function TasksPage() {
       }
     >
       <div className="space-y-6">
-        <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           <KPI
             title="Volume total"
             value={tasks.length}
@@ -173,14 +167,6 @@ export default function TasksPage() {
             trend={1.8}
             trendLabel="focus"
           />
-          <KPI
-            title="Bloquees"
-            value={blockedTasks.length}
-            icon={AlertTriangle}
-            iconTone="red"
-            trend={-1.4}
-            trendLabel="surveillance"
-          />
         </section>
 
         <section className="surface-card rounded-[30px] border border-white/60 p-4 sm:p-5">
@@ -190,7 +176,7 @@ export default function TasksPage() {
                 Filtres d&apos;execution
               </p>
               <p className="text-sm text-slate-500">
-                Tri automatique par priorite, risque et echeance.
+                Tri automatique par priorité, risque et échéance.
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
@@ -213,37 +199,9 @@ export default function TasksPage() {
           </div>
         </section>
 
-        <section
-          className={cn(
-            "grid gap-6",
-            preferences.showInsights
-              ? "xl:grid-cols-[minmax(0,1.2fr)_minmax(320px,0.8fr)]"
-              : "grid-cols-1",
-          )}
-        >
-          <article className="surface-card overflow-hidden rounded-[30px] border border-white/60">
-            <div className="flex flex-col gap-3 border-b border-slate-200/70 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <p className="text-sm font-semibold tracking-[-0.02em] text-slate-950">
-                  Vue tabulaire
-                </p>
-                <p className="text-sm text-slate-500">
-                  Tri automatique par score de priorite et risque.
-                </p>
-              </div>
-              <div className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
-                Filtre actif: {filterLabels[filter]}
-              </div>
-            </div>
-            <TaskTable
-              tasks={filteredTasks}
-              onEdit={handleEditTask}
-              onDelete={handleDeleteTask}
-            />
-          </article>
-
+        <section className="space-y-6">
           {preferences.showInsights ? (
-            <div className="space-y-6">
+            <div className="grid gap-6 xl:grid-cols-2">
               <article className="surface-card rounded-[30px] border border-white/60 p-5">
                 <div className="flex items-center justify-between">
                   <div>
@@ -333,11 +291,6 @@ export default function TasksPage() {
                       value: todayTasks.length,
                       tone: "bg-indigo-500",
                     },
-                    {
-                      label: "Bloquees",
-                      value: blockedTasks.length,
-                      tone: "bg-slate-900",
-                    },
                   ].map((item) => {
                     const width = tasks.length
                       ? Math.max((item.value / tasks.length) * 100, 8)
@@ -362,6 +315,27 @@ export default function TasksPage() {
               </article>
             </div>
           ) : null}
+
+          <article className="surface-card overflow-hidden rounded-[30px] border border-white/60">
+            <div className="flex flex-col gap-3 border-b border-slate-200/70 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="text-sm font-semibold tracking-[-0.02em] text-slate-950">
+                  Vue tabulaire
+                </p>
+                <p className="text-sm text-slate-500">
+                  Tri automatique par score de priorite et risque.
+                </p>
+              </div>
+              <div className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
+                Filtre actif: {filterLabels[filter]}
+              </div>
+            </div>
+            <TaskTable
+              tasks={filteredTasks}
+              onEdit={handleEditTask}
+              onDelete={handleDeleteTask}
+            />
+          </article>
         </section>
 
         <Modal

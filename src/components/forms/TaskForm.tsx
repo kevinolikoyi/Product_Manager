@@ -219,7 +219,7 @@ export default function TaskForm({ task, onClose, onSuccess }: TaskFormProps) {
               ? "Aucun projet dans ce departement. Choisissez 'Autre' pour en creer un."
               : filteredProjects.length === 1
                 ? 'Le projet deja cree pour ce departement a ete selectionne automatiquement.'
-              : `${filteredProjects.length} projet(s) disponible(s) dans ce departement.`}
+                : `${filteredProjects.length} projet(s) disponible(s) dans ce departement.`}
         </p>
         {errors.project ? <p className="mt-1 text-sm text-red-600">{errors.project}</p> : null}
       </div>
@@ -268,11 +268,11 @@ export default function TaskForm({ task, onClose, onSuccess }: TaskFormProps) {
           <label className="mb-1 block text-sm font-medium text-gray-700">Statut</label>
           <SelectField
             options={[
-              { value: 'todo', label: 'A faire' },
+              { value: 'todo', label: 'À faire' },
               { value: 'in_progress', label: 'En cours' },
-              { value: 'done', label: 'Termine' },
-              { value: 'tested', label: 'Teste' },
-              { value: 'deployed', label: 'Deploye' },
+              { value: 'done', label: 'Terminer' },
+              { value: 'tested', label: 'Tester / Vérifier' },
+              { value: 'deployed', label: 'Déployer / Livrer' },
             ]}
             value={formData.status}
             onChange={(value) =>

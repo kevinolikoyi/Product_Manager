@@ -15,7 +15,6 @@ import {
   cn,
   getProjectProgressTone,
   getTodayIsoDate,
-  isTaskBlocked,
   isTaskComplete,
   isTaskOverdue,
   projectStatusLabels,
@@ -27,7 +26,7 @@ const filterLabels: Record<Filter, string> = {
   all: 'Tous',
   active: 'Actifs',
   on_hold: 'En pause',
-  completed: 'Termines',
+  completed: 'Terminés',
 };
 
 export default function ProjectsPage() {
@@ -46,13 +45,11 @@ export default function ProjectsPage() {
 
   const portfolio = projects.map((project) => {
     const relatedTasks = tasks.filter((task) => task.projectId === project.id);
-    const blockedTasks = relatedTasks.filter((task) => isTaskBlocked(task)).length;
     const overdueTasks = relatedTasks.filter((task) => isTaskOverdue(task, today)).length;
     const openTasks = relatedTasks.filter((task) => !isTaskComplete(task)).length;
 
     return {
       project,
-      blockedTasks,
       overdueTasks,
       openTasks,
     };
@@ -81,8 +78,8 @@ export default function ProjectsPage() {
       Math.max(visibleProjects.length, 1),
   );
   const stressedProjects = visiblePortfolio.filter(
-    ({ blockedTasks, overdueTasks, project }) =>
-      project.status !== 'completed' && (blockedTasks > 0 || overdueTasks > 0),
+    ({ overdueTasks, project }) =>
+      project.status !== 'completed' && overdueTasks > 0,
   ).length;
 
   const handleEdit = (project: Project) => {
@@ -123,8 +120,8 @@ export default function ProjectsPage() {
   };
 
   const atRiskPortfolio = visiblePortfolio
-    .filter(({ blockedTasks, overdueTasks, project }) =>
-      project.status !== 'completed' && (blockedTasks > 0 || overdueTasks > 0),
+    .filter(({ overdueTasks, project }) =>
+      project.status !== 'completed' && overdueTasks > 0,
     )
     .slice(0, 4);
 
@@ -239,12 +236,11 @@ export default function ProjectsPage() {
           )}
         >
           <div className="grid gap-5 md:grid-cols-2">
-            {filteredPortfolio.map(({ project, openTasks, blockedTasks, overdueTasks }) => (
+            {filteredPortfolio.map(({ project, openTasks, overdueTasks }) => (
               <ProjectCard
                 key={project.id}
                 project={project}
                 openTasks={openTasks}
-                blockedTasks={blockedTasks}
                 overdueTasks={overdueTasks}
                 onEdit={handleEdit}
                 onDelete={handleDelete}
@@ -273,7 +269,7 @@ export default function ProjectsPage() {
                       </p>
                     </div>
                   ) : (
-                    atRiskPortfolio.map(({ project, blockedTasks, overdueTasks, openTasks }) => (
+                    atRiskPortfolio.map(({ project, overdueTasks, openTasks }) => (
                       <div
                         key={project.id}
                         className="rounded-[22px] border border-slate-200/70 bg-white/70 p-4"
@@ -284,7 +280,7 @@ export default function ProjectsPage() {
                               {project.name}
                             </p>
                             <p className="mt-1 text-sm text-slate-500">
-                              {getDepartmentName(project.departmentId)} · {projectStatusLabels[project.status]} · {openTasks} taches ouvertes
+                              {getDepartmentName(project.departmentId)} · {projectStatusLabels[project.status]} · {openTasks} tâches ouvertes
                             </p>
                           </div>
                           <span
@@ -295,11 +291,6 @@ export default function ProjectsPage() {
                           />
                         </div>
                         <div className="mt-3 flex flex-wrap gap-2 text-xs">
-                          {blockedTasks > 0 ? (
-                            <span className="rounded-full bg-red-50 px-2.5 py-1 font-semibold text-red-700">
-                              {blockedTasks} bloquees
-                            </span>
-                          ) : null}
                           {overdueTasks > 0 ? (
                             <span className="rounded-full bg-amber-50 px-2.5 py-1 font-semibold text-amber-700">
                               {overdueTasks} en retard

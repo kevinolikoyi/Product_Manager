@@ -58,11 +58,11 @@ export default function KanbanPage() {
     <Layout
       title="Kanban"
       eyebrow="Workflow"
-      description="Gestion visuelle du flux de livraison avec glisser-deposer entre les colonnes A faire, En cours, Termine, Teste et Deploye."
+      description="Gestion visuelle du flux de livraison avec glisser-deposer entre les colonnes À faire, En cours, Terminer, Tester / Vérifier et Déployer / Livrer."
       actions={
         <Button type="button" onClick={handleAddTask}>
           <Plus className="mr-1.5 h-4 w-4" />
-          Nouvelle tache
+          Nouvelle tâche
         </Button>
       }
     >
@@ -77,7 +77,7 @@ export default function KanbanPage() {
             trendLabel="workflow"
           />
           <KPI
-            title="Terminees"
+            title="Terminées"
             value={doneTasks}
             icon={Boxes}
             iconTone="emerald"
@@ -85,7 +85,7 @@ export default function KanbanPage() {
             trendLabel="pretes"
           />
           <KPI
-            title="Testees"
+            title="Testées / Vérifiées"
             value={testedTasks}
             icon={CheckCheck}
             iconTone="indigo"
@@ -93,7 +93,7 @@ export default function KanbanPage() {
             trendLabel="validation"
           />
           <KPI
-            title="Deployees"
+            title="Déployées / Livrées"
             value={deployedTasks}
             icon={Rocket}
             iconTone="violet"
@@ -110,7 +110,7 @@ export default function KanbanPage() {
                   Board de livraison
                 </p>
                 <p className="text-sm text-slate-500">
-                  Deplace les cartes entre les colonnes pour suivre l&apos;avancement reel des taches.
+                  Déplace les cartes entre les colonnes pour suivre l&apos;avancement reel des tâches.
                 </p>
               </div>
               <div className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
@@ -120,11 +120,11 @@ export default function KanbanPage() {
 
             <div className="max-w-md">
               <label className="mb-2 block text-sm font-medium text-slate-700">
-                Departement
+                Département
               </label>
               <SelectField
                 options={[
-                  { value: "all", label: "Tous les departements" },
+                  { value: "all", label: "Tous les départements" },
                   ...departments.map((department) => ({
                     value: department.id,
                     label: department.name,
@@ -136,10 +136,10 @@ export default function KanbanPage() {
               {departments.length === 0 ? (
                 <p className="mt-2 text-sm text-slate-500">
                   {backendStatus.loading
-                    ? "Chargement des departements..."
+                    ? "Chargement des départements..."
                     : backendStatus.error
-                      ? `Aucun departement charge. ${backendStatus.error}`
-                      : "Aucun departement disponible dans le workspace actif."}
+                      ? `Aucun département charge. ${backendStatus.error}`
+                      : "Aucun département disponible dans le workspace actif."}
                 </p>
               ) : null}
             </div>
@@ -153,7 +153,7 @@ export default function KanbanPage() {
         <Modal
           isOpen={isModalOpen}
           onClose={handleCloseModal}
-          title={editingTask ? "Modifier la tache" : "Ajouter une tache"}
+          title={editingTask ? "Modifier la tâche" : "Ajouter une tâche"}
         >
           <TaskForm
             task={editingTask}

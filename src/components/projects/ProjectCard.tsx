@@ -9,7 +9,6 @@ import { cn, getProjectProgressTone, projectStatusLabels } from '@/lib/utils';
 interface ProjectCardProps {
   project: Project;
   openTasks: number;
-  blockedTasks: number;
   overdueTasks: number;
   onEdit?: (project: Project) => void;
   onDelete?: (id: string) => void;
@@ -18,7 +17,6 @@ interface ProjectCardProps {
 export default function ProjectCard({
   project,
   openTasks,
-  blockedTasks,
   overdueTasks,
   onEdit,
   onDelete,
@@ -35,7 +33,7 @@ export default function ProjectCard({
   const projectHealth =
     project.status === 'completed'
       ? { label: 'Livre', tone: 'text-emerald-600' }
-      : blockedTasks > 0 || overdueTasks > 0
+      : overdueTasks > 0
         ? { label: 'Sous tension', tone: 'text-red-600' }
         : { label: 'Cadence stable', tone: 'text-slate-600' };
 
@@ -74,18 +72,12 @@ export default function ProjectCard({
         </div>
       </div>
 
-      <div className="mt-6 grid gap-3 sm:grid-cols-3">
+      <div className="mt-6 grid gap-3 sm:grid-cols-2">
         <div className="rounded-[20px] bg-white/75 px-4 py-3">
           <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">
             Ouvertes
           </p>
           <p className="mt-2 text-xl font-semibold tracking-[-0.03em] text-slate-950">{openTasks}</p>
-        </div>
-        <div className="rounded-[20px] bg-white/75 px-4 py-3">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">
-            Bloquees
-          </p>
-          <p className="mt-2 text-xl font-semibold tracking-[-0.03em] text-slate-950">{blockedTasks}</p>
         </div>
         <div className="rounded-[20px] bg-white/75 px-4 py-3">
           <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">
@@ -97,7 +89,7 @@ export default function ProjectCard({
 
       <div className="mt-6 flex flex-col gap-3 border-t border-slate-200/70 pt-4 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-sm text-slate-500">
-          {project.numberOfTasks} taches planifiees
+          {project.numberOfTasks} tâches planifiées
         </p>
         <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:justify-end">
           {onEdit ? (

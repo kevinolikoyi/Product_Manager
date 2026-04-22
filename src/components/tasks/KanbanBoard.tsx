@@ -46,7 +46,7 @@ interface BoardTask extends Record<string, unknown> {
 const columns: ColumnConfig[] = [
   {
     id: "todo",
-    name: "A faire",
+    name: "À faire",
     color: "#64748B",
     description: "Backlog priorisé a lancer.",
     boardTone: "border-slate-200 bg-slate-50/80",
@@ -70,7 +70,7 @@ const columns: ColumnConfig[] = [
   },
   {
     id: "tested",
-    name: "Tester",
+    name: "Tester / Vérifier",
     color: "#0EA5E9",
     description: "Validation fonctionnelle effectuée.",
     boardTone: "border-sky-200 bg-sky-50/80",
@@ -78,7 +78,7 @@ const columns: ColumnConfig[] = [
   },
   {
     id: "deployed",
-    name: "Deployer",
+    name: "Déployer / Livrer",
     color: "#8B5CF6",
     description: "Livré et disponible en production.",
     boardTone: "border-violet-200 bg-violet-50/80",

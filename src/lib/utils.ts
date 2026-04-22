@@ -7,11 +7,11 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 export const statusLabels: Record<Task["status"], string> = {
-  todo: "A faire",
+  todo: "À faire",
   in_progress: "En cours",
-  done: "Terminee",
-  tested: "Testee",
-  deployed: "Deployee",
+  done: "Terminer",
+  tested: "Tester / Vérifier",
+  deployed: "Déployer / Livrer",
 };
 
 export const priorityLabels: Record<Task["priority"], string> = {
@@ -124,17 +124,12 @@ export function isTaskOverdue(task: Task, today = getTodayIsoDate()) {
   return task.dueDate < today && !isTaskComplete(task);
 }
 
-export function isTaskBlocked(task: Task) {
-  return task.risk === "high" && task.status === "in_progress";
-}
-
 export function getTaskPriorityScore(task: Task, today = getTodayIsoDate()) {
   const priorityValue = { high: 3, medium: 2, low: 1 }[task.priority];
   const riskValue = { high: 4, medium: 2, low: 1 }[task.risk];
   const overdueBonus = isTaskOverdue(task, today) ? 4 : 0;
-  const blockedBonus = isTaskBlocked(task) ? 5 : 0;
 
-  return priorityValue + riskValue + overdueBonus + blockedBonus;
+  return priorityValue + riskValue + overdueBonus;
 }
 
 export function getProjectProgressTone(status: Project["status"]) {

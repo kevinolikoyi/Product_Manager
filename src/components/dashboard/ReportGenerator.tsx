@@ -11,7 +11,6 @@ import {
   formatFullDate,
   getTaskPriorityScore,
   getTodayIsoDate,
-  isTaskBlocked,
   isTaskComplete,
   isTaskOverdue,
   priorityLabels,
@@ -48,6 +47,7 @@ function createFilename(startDate: string, endDate: string) {
 function addSectionTitle(doc: jsPDF, title: string, y: number) {
   doc.setFont("helvetica", "bold");
   doc.setFontSize(13);
+  doc.setTextColor(15, 23, 42);
   doc.text(title, 16, y);
   return y + 8;
 }
@@ -80,16 +80,32 @@ function drawTable(
 
   const drawHeader = (headerY: number) => {
     let x = left;
-    doc.setFillColor(238, 242, 255);
-    doc.setDrawColor(203, 213, 225);
-    doc.setTextColor(15, 23, 42);
     doc.setFont("helvetica", "bold");
     doc.setFontSize(9);
 
     headers.forEach((header, index) => {
       const width = scaledWidths[index];
-      doc.rect(x, headerY, width, 9, "FD");
+
+      if (index === 0) {
+        doc.setFillColor(238, 242, 255);
+        doc.setDrawColor(203, 213, 225);
+        doc.rect(x, headerY, width, 9, "FD");
+        doc.setTextColor(15, 23, 42);
+      } else {
+        doc.setFillColor(15, 23, 42);
+        doc.setDrawColor(15, 23, 42);
+        doc.rect(x, headerY, width, 9, "FD");
+        doc.setTextColor(255, 255, 255);
+      }
+
       doc.text(header, x + 2, headerY + 5.8);
+
+      if (index < headers.length - 1) {
+        const dividerX = x + width;
+        doc.setDrawColor(index === 0 ? 203 : 255, index === 0 ? 213 : 255, index === 0 ? 225 : 255);
+        doc.line(dividerX, headerY, dividerX, headerY + 9);
+      }
+
       x += width;
     });
 
@@ -101,6 +117,7 @@ function drawTable(
 
   doc.setFont("helvetica", "normal");
   doc.setFontSize(8.7);
+  doc.setTextColor(15, 23, 42);
 
   rows.forEach((row) => {
     const cellLines = row.map((cell, index) =>
@@ -115,6 +132,7 @@ function drawTable(
       y = drawHeader(y);
       doc.setFont("helvetica", "normal");
       doc.setFontSize(8.7);
+      doc.setTextColor(15, 23, 42);
     }
 
     let x = left;
@@ -207,7 +225,6 @@ export default function ReportGenerator() {
       );
 
       const overdueTasks = tasksInPeriod.filter((task) => isTaskOverdue(task, endDate));
-      const blockedTasks = tasksInPeriod.filter((task) => isTaskBlocked(task));
       const completedTasks = tasksInPeriod.filter((task) => isTaskComplete(task));
       const activeProjects = impactedProjects.filter((project) => project.status === "active");
 
@@ -224,7 +241,6 @@ export default function ReportGenerator() {
       doc.text(`Periode analysee : ${buildPeriodLabel(startDate, endDate)}`, 18, 31);
       doc.text(`Genere le ${formatFullDate(today)}`, 18, 36);
 
-      doc.setTextColor(15, 23, 42);
       y = 50;
       y = addSectionTitle(doc, "Synthese executive", y);
       y = drawTable(
@@ -232,14 +248,13 @@ export default function ReportGenerator() {
         y,
         ["Indicateur", "Valeur"],
         [
-          ["Taches suivies", String(tasksInPeriod.length)],
-          ["Taches terminees", String(completedTasks.length)],
-          ["Taches en retard", String(overdueTasks.length)],
-          ["Taches bloquees", String(blockedTasks.length)],
-          ["Projets concernes", String(impactedProjects.length)],
+          ["Tâches suivies", String(tasksInPeriod.length)],
+          ["Tâches terminées", String(completedTasks.length)],
+          ["Tâches en retard", String(overdueTasks.length)],
+          ["Projets concernés", String(impactedProjects.length)],
           ["Projets actifs", String(activeProjects.length)],
           [
-            "Taux de completion",
+            "Taux de complétion",
             `${tasksInPeriod.length ? Math.round((completedTasks.length / tasksInPeriod.length) * 100) : 0}%`,
           ],
         ],
@@ -247,20 +262,20 @@ export default function ReportGenerator() {
       );
 
       y = ensurePageSpace(doc, y + 4, 40);
-      y = addSectionTitle(doc, "Taches prioritaires", y + 4);
+      y = addSectionTitle(doc, "Tâches prioritaires", y + 4);
       if (tasksInPeriod.length === 0) {
         y = drawTable(
           doc,
           y,
-          ["Information", "Detail"],
-          [["Disponibilite", "Aucune tache ne tombe sur la plage selectionnee."]],
+          ["Information", "Détail"],
+          [["Disponibilité", "Aucune tâche ne tombe sur la plage sélectionnée."]],
           [52, 124],
         );
       } else {
         y = drawTable(
           doc,
           y,
-          ["Tache", "Projet", "Statut", "Priorite", "Echeance"],
+          ["Tache", "Projet", "Statut", "Priorité", "Échéance"],
           tasksInPeriod.slice(0, 8).map((task) => [
             task.title,
             getProjectName(task.projectId),
@@ -273,13 +288,13 @@ export default function ReportGenerator() {
       }
 
       y = ensurePageSpace(doc, y + 4, 36);
-      y = addSectionTitle(doc, "Projets concernes", y + 4);
+      y = addSectionTitle(doc, "Projets concernés", y + 4);
       if (impactedProjects.length === 0) {
         y = drawTable(
           doc,
           y,
-          ["Information", "Detail"],
-          [["Disponibilite", "Aucun projet n'est rattache a la periode selectionnee."]],
+          ["Information", "Détail"],
+          [["Disponibilité", "Aucun projet n'est rattaché à la periode selectionnée."]],
           [52, 124],
         );
       } else {

@@ -6,7 +6,6 @@ import {
   CheckCircle2,
   CircleDashed,
   Clock3,
-  ShieldX,
 } from "lucide-react";
 import AlertCard from "@/components/dashboard/AlertCard";
 import KPI from "@/components/dashboard/KPI";
@@ -18,7 +17,6 @@ import {
   getProjectProgressTone,
   getTaskPriorityScore,
   getTodayIsoDate,
-  isTaskBlocked,
   isTaskComplete,
   isTaskOverdue,
   priorityLabels,
@@ -36,7 +34,6 @@ export default function DashboardPage() {
   const today = getTodayIsoDate();
 
   const overdueTasks = tasks.filter((task) => isTaskOverdue(task, today));
-  const blockedTasks = tasks.filter((task) => isTaskBlocked(task));
   const tasksDueToday = tasks.filter(
     (task) => task.dueDate === today && !isTaskComplete(task),
   );
@@ -85,7 +82,7 @@ export default function DashboardPage() {
           <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
             Pilotage
           </p>
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-6">
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
             <KPI
               title="Tâches terminées"
               value={completedTasks}
@@ -101,14 +98,6 @@ export default function DashboardPage() {
               iconTone="amber"
               trend={-8.4}
               trendLabel="urgence"
-            />
-            <KPI
-              title="Tâches bloquées"
-              value={blockedTasks.length}
-              icon={ShieldX}
-              iconTone="red"
-              trend={-2.1}
-              trendLabel="attention"
             />
             <KPI
               title="Haute priorité"
@@ -137,30 +126,17 @@ export default function DashboardPage() {
           </div>
         </section>
 
-        <section className="grid gap-4 xl:grid-cols-2">
+        <section>
           {criticalTasks.length > 0 ? (
             <AlertCard
-              title={`${criticalTasks.length} taches critiques en retard`}
-              description="Priorite haute detectee. Reallocation et arbitrage requis a court terme."
+              title={`${criticalTasks.length} tâches critiques en retard`}
+              description="Priorité haute détectée. Réallocation et arbitrage requis à court terme."
               type="error"
             />
           ) : (
             <AlertCard
-              title="Aucune tache critique en retard"
-              description="Le portefeuille reste sous controle sur les sujets a forte priorite."
-              type="info"
-            />
-          )}
-          {blockedTasks.length > 0 ? (
-            <AlertCard
-              title={`${blockedTasks.length} taches bloquees en cours`}
-              description="Des dependances externes ralentissent l'execution sur les streams sensibles."
-              type="warning"
-            />
-          ) : (
-            <AlertCard
-              title="Aucun blocage majeur"
-              description="Les equipes gardent une cadence reguliere sur les items en cours."
+              title="Aucune tâche critique en retard"
+              description="Le portefeuille reste sous contrôle sur les sujets à forte priorité."
               type="info"
             />
           )}
@@ -174,11 +150,11 @@ export default function DashboardPage() {
                   Tâches prioritaires
                 </p>
                 <p className="text-sm text-slate-500">
-                  Classement dynamique par risque, priorite et échéance.
+                  Classement dynamique par risque, priorité et échéance.
                 </p>
               </div>
               <div className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
-                {tasksDueToday.length} a traiter aujourd&apos;hui
+                {tasksDueToday.length} à traiter aujourd&apos;hui
               </div>
             </div>
 
@@ -289,7 +265,7 @@ export default function DashboardPage() {
                       {projectStatusLabels[project.status]}
                     </p>
                     <p className="mt-1 text-xs text-slate-400">
-                      {project.numberOfTasks} taches
+                      {project.numberOfTasks} tâches
                     </p>
                   </div>
                 </div>
@@ -304,7 +280,7 @@ export default function DashboardPage() {
                 <p className="mt-2 text-xl font-semibold tracking-[-0.03em] text-slate-950">
                   {completionRate}%
                 </p>
-                <p className="text-sm text-slate-500">Tâches completées</p>
+                <p className="text-sm text-slate-500">Tâches complétées</p>
               </div>
               <div className="rounded-2xl bg-white/80 px-4 py-3">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">

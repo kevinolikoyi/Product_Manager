@@ -10,7 +10,15 @@ import Modal from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import { SelectField } from '@/components/ui/Select';
 import type { Project } from '@/lib/types';
-import { useBackendStatus, useDepartments, useProjectDirectory, useProjects, useTasks, useWorkspacePreferences } from '@/lib/store';
+import {
+  useBackendStatus,
+  useDepartments,
+  usePermissions,
+  useProjectDirectory,
+  useProjects,
+  useTasks,
+  useWorkspacePreferences,
+} from '@/lib/store';
 import {
   cn,
   getProjectProgressTone,
@@ -26,7 +34,7 @@ const filterLabels: Record<Filter, string> = {
   all: 'Tous',
   active: 'Actifs',
   on_hold: 'En pause',
-  completed: 'Terminés',
+  completed: 'Termines',
 };
 
 export default function ProjectsPage() {
@@ -37,6 +45,7 @@ export default function ProjectsPage() {
 
   const { departments } = useDepartments();
   const backendStatus = useBackendStatus();
+  const { canManageProjects, currentRoleLabel } = usePermissions();
   const { getDepartmentName } = useProjectDirectory();
   const { projects, deleteProjectById } = useProjects();
   const { tasks } = useTasks();
@@ -78,16 +87,23 @@ export default function ProjectsPage() {
       Math.max(visibleProjects.length, 1),
   );
   const stressedProjects = visiblePortfolio.filter(
-    ({ overdueTasks, project }) =>
-      project.status !== 'completed' && overdueTasks > 0,
+    ({ overdueTasks, project }) => project.status !== 'completed' && overdueTasks > 0,
   ).length;
 
   const handleEdit = (project: Project) => {
+    if (!canManageProjects) {
+      return;
+    }
+
     setEditingProject(project);
     setIsModalOpen(true);
   };
 
   const handleDelete = async (id: string) => {
+    if (!canManageProjects) {
+      return;
+    }
+
     const targetProject = projects.find((project) => project.id === id);
     if (!targetProject) return;
 
@@ -105,6 +121,10 @@ export default function ProjectsPage() {
   };
 
   const handleAddProject = () => {
+    if (!canManageProjects) {
+      return;
+    }
+
     setEditingProject(null);
     setIsModalOpen(true);
   };
@@ -120,23 +140,44 @@ export default function ProjectsPage() {
   };
 
   const atRiskPortfolio = visiblePortfolio
-    .filter(({ overdueTasks, project }) =>
-      project.status !== 'completed' && overdueTasks > 0,
-    )
+    .filter(({ overdueTasks, project }) => project.status !== 'completed' && overdueTasks > 0)
     .slice(0, 4);
 
   return (
     <Layout
       title="Projets"
       eyebrow="Portefeuille"
-      description="Lecture portefeuille des streams actifs, du niveau de progression et des points de tension."
+      description={
+        canManageProjects
+          ? 'Lecture portefeuille des streams actifs, du niveau de progression et des points de tension.'
+          : `Vue lecture seule pour ${currentRoleLabel?.toLowerCase() ?? 'le collaborateur'} sur les projets relies aux taches.`
+      }
       actions={
-        <Button onClick={handleAddProject} className="rounded-full">
-          Ajouter un projet
-        </Button>
+        canManageProjects ? (
+          <Button onClick={handleAddProject} className="rounded-full">
+            Ajouter un projet
+          </Button>
+        ) : (
+          <div className="rounded-full border border-slate-200/80 bg-white/85 px-4 py-2 text-sm font-medium text-slate-700 shadow-sm">
+            Lecture seule
+          </div>
+        )
       }
     >
       <div className="space-y-6">
+        {!canManageProjects ? (
+          <section className="surface-card rounded-[30px] border border-white/60 p-5">
+            <p className="text-sm font-semibold tracking-[-0.02em] text-slate-950">
+              Acces projet limite
+            </p>
+            <p className="mt-1 text-sm text-slate-500">
+              Les collaborateurs peuvent consulter le portefeuille pour contextualiser leurs
+              taches, mais la creation, l&apos;edition et la suppression restent reservees aux
+              managers et owners.
+            </p>
+          </section>
+        ) : null}
+
         <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           <KPI
             title="Portefeuille total"
@@ -242,8 +283,8 @@ export default function ProjectsPage() {
                 project={project}
                 openTasks={openTasks}
                 overdueTasks={overdueTasks}
-                onEdit={handleEdit}
-                onDelete={handleDelete}
+                onEdit={canManageProjects ? handleEdit : undefined}
+                onDelete={canManageProjects ? handleDelete : undefined}
               />
             ))}
           </div>
@@ -255,7 +296,7 @@ export default function ProjectsPage() {
                   Focus portefeuille
                 </p>
                 <p className="text-sm text-slate-500">
-                  Projets qui demandent un arbitrage ou une attention immédiate.
+                  Projets qui demandent un arbitrage ou une attention immediate.
                 </p>
 
                 <div className="mt-5 space-y-3">
@@ -280,7 +321,7 @@ export default function ProjectsPage() {
                               {project.name}
                             </p>
                             <p className="mt-1 text-sm text-slate-500">
-                              {getDepartmentName(project.departmentId)} · {projectStatusLabels[project.status]} · {openTasks} tâches ouvertes
+                              {getDepartmentName(project.departmentId)} - {projectStatusLabels[project.status]} - {openTasks} taches ouvertes
                             </p>
                           </div>
                           <span
@@ -316,7 +357,7 @@ export default function ProjectsPage() {
                     { label: 'Actifs', value: activeProjects, tone: 'bg-indigo-500' },
                     { label: 'En pause', value: pausedProjects, tone: 'bg-amber-500' },
                     {
-                      label: 'Terminés',
+                      label: 'Termines',
                       value: visibleProjects.filter((project) => project.status === 'completed').length,
                       tone: 'bg-emerald-500',
                     },
@@ -346,17 +387,19 @@ export default function ProjectsPage() {
           ) : null}
         </section>
 
-        <Modal
-          isOpen={isModalOpen}
-          onClose={handleCloseModal}
-          title={editingProject ? 'Modifier le projet' : 'Ajouter un projet'}
-        >
-          <ProjectForm
-            project={editingProject}
+        {canManageProjects ? (
+          <Modal
+            isOpen={isModalOpen}
             onClose={handleCloseModal}
-            onSuccess={handleProjectSuccess}
-          />
-        </Modal>
+            title={editingProject ? 'Modifier le projet' : 'Ajouter un projet'}
+          >
+            <ProjectForm
+              project={editingProject}
+              onClose={handleCloseModal}
+              onSuccess={handleProjectSuccess}
+            />
+          </Modal>
+        ) : null}
       </div>
     </Layout>
   );

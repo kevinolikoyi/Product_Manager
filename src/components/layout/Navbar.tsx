@@ -24,7 +24,7 @@ export default function Navbar({
   const pathname = usePathname();
   const fallback = pageMetadata[pathname] ?? {
     title: "AS WORLD TECH",
-    description: "Workspace collaboratif et pilotage des opérations.",
+    description: "Workspace collaboratif et pilotage des operations.",
     eyebrow: "Workspace",
   };
 
@@ -56,7 +56,7 @@ export default function Navbar({
                 {title ?? fallback.title}
               </h1>
               <span className="hidden rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-700 sm:inline-flex">
-                Système stable
+                Systeme stable
               </span>
             </div>
             <p className="mt-1 max-w-3xl text-sm text-slate-500 sm:text-[15px]">

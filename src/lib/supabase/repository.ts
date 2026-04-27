@@ -1,5 +1,6 @@
 import { getSupabaseBrowserClient } from '@/lib/supabase/client';
 import { getSupabasePublicConfig } from '@/lib/supabase/config';
+import { normalizeWorkspaceRole, type LegacyWorkspaceRole } from '@/lib/permissions';
 import {
   normalizeDepartments,
   remapMemberDepartments,
@@ -25,7 +26,7 @@ interface CollaboratorRow {
   department_id: number | null;
   full_name: string;
   email: string | null;
-  role: Member['role'];
+  role: LegacyWorkspaceRole;
 }
 
 interface ProjectRow {
@@ -219,8 +220,8 @@ function mapMembers(rows: CollaboratorRow[]) {
       id: stringifyEntityId(collaborator.id),
       name: collaborator.full_name,
       departmentId: collaborator.department_id ? stringifyEntityId(collaborator.department_id) : '',
-      role: collaborator.role,
-      email: collaborator.email ?? undefined,
+      role: normalizeWorkspaceRole(collaborator.role),
+      email: collaborator.email?.trim() || undefined,
     }))
     .sort((left, right) => left.name.localeCompare(right.name)) satisfies Member[];
 }

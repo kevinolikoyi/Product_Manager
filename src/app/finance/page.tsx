@@ -5,11 +5,13 @@ import { Banknote, Pencil, ReceiptText, Wallet } from "lucide-react";
 import KPI from "@/components/dashboard/KPI";
 import FinanceForm from "@/components/dashboard/FinanceForm";
 import Layout from "@/components/layout/Layout";
-import { useFinances } from "@/lib/store";
+import { useCurrentMember, useFinances, usePermissions } from "@/lib/store";
 import type { Finance } from "@/lib/types";
 import { formatCompactCurrency, formatFinanceMonth } from "@/lib/utils";
 
 export default function FinancePage() {
+  const { currentMember } = useCurrentMember();
+  const { canManageFinance } = usePermissions();
   const { finances } = useFinances();
   const [showForm, setShowForm] = useState(false);
   const [editingFinance, setEditingFinance] = useState<Finance | null>(null);
@@ -25,11 +27,32 @@ export default function FinancePage() {
     return ((current - previous) / previous) * 100;
   };
 
+  if (!canManageFinance) {
+    return (
+      <Layout
+        title="Finances"
+        eyebrow="Performance"
+        description="Acces restreint aux indicateurs financiers et aux saisies mensuelles."
+      >
+        <article className="surface-card rounded-[30px] border border-white/60 p-6">
+          <h2 className="text-lg font-semibold tracking-[-0.02em] text-slate-950">
+            Acces refuse
+          </h2>
+          <p className="mt-2 text-sm leading-6 text-slate-500">
+            Les finances du workspace sont reservees aux owners et managers. Le profil actif
+            {currentMember ? ` ${currentMember.name}` : ""} ne dispose pas de ce niveau
+            d&apos;autorisation.
+          </p>
+        </article>
+      </Layout>
+    );
+  }
+
   return (
     <Layout
       title="Finances"
       eyebrow="Performance"
-      description="Suivi synthétique des revenus, depenses et marge mensuelle."
+      description="Suivi synthetique des revenus, depenses et marge mensuelle."
       actions={
         <button
           type="button"
@@ -77,7 +100,8 @@ export default function FinancePage() {
               Aucun historique financier
             </h3>
             <p className="mt-2 text-sm text-slate-500">
-              Les donnees mensuelles seront chargees depuis Supabase des qu&apos;une premiere periode sera saisie.
+              Les donnees mensuelles seront chargees depuis Supabase des qu&apos;une premiere
+              periode sera saisie.
             </p>
           </article>
         ) : (

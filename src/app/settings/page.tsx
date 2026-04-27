@@ -11,6 +11,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import Layout from "@/components/layout/Layout";
+import CollaboratorAdminSection from "@/components/settings/CollaboratorAdminSection";
 import { Button } from "@/components/ui/Button";
 import {
   useWorkspacePreferences,
@@ -88,6 +89,8 @@ export default function SettingsPage() {
       actions={configurationActions}
     >
       <div className="space-y-6">
+        <CollaboratorAdminSection />
+
         <section className="grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
           <article className="surface-card rounded-[30px] border border-white/60 p-5 sm:p-6">
             <div className="flex items-start gap-3">
@@ -322,6 +325,7 @@ export default function SettingsPage() {
             </Button>
           </div>
         </section>
+
       </div>
     </Layout>
   );

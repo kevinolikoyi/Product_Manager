@@ -3,14 +3,17 @@ import {
   LayoutDashboard,
   LayoutGrid,
   ListTodo,
+  UsersRound,
   type LucideIcon,
 } from "lucide-react";
+import type { WorkspaceRole } from "@/lib/types";
 
 export interface NavigationItem {
   label: string;
   href: string;
   icon: LucideIcon;
   section: "navigation" | "settings";
+  minimumRole?: WorkspaceRole;
 }
 
 export const navigationItems: NavigationItem[] = [
@@ -27,7 +30,7 @@ export const navigationItems: NavigationItem[] = [
     section: "navigation",
   },
   {
-    label: "Tâches",
+    label: "Taches",
     href: "/tasks",
     icon: ListTodo,
     section: "navigation",
@@ -38,6 +41,13 @@ export const navigationItems: NavigationItem[] = [
     icon: LayoutGrid,
     section: "navigation",
   },
+  {
+    label: "Gestion des collaborateurs",
+    href: "/settings",
+    icon: UsersRound,
+    section: "settings",
+    minimumRole: "manager",
+  },
 ];
 
 export const pageMetadata: Record<
@@ -46,22 +56,32 @@ export const pageMetadata: Record<
 > = {
   "/dashboard": {
     title: "Tableau de bord",
-    description: "Pilotage global des operations, alertes et execution des equipes.",
+    description: "Pilotage global des opérations, alertes et exécution des équipes.",
     eyebrow: "Vue d'ensemble",
   },
   "/tasks": {
-    title: "Tâches",
-    description: "Suivi des priorites, risques et echeances de livraison.",
+    title: "Taches",
+    description: "Suivi des priorités, risques et échéances de livraison.",
     eyebrow: "Execution",
   },
   "/projects": {
     title: "Projets",
-    description: "Avancement des squads et sante du portefeuille produit.",
+    description: "Avancement des squads et santé du portefeuille produit.",
     eyebrow: "Portefeuille",
   },
   "/kanban": {
     title: "Kanban",
-    description: "Pilotage visuel des Tâches avec drag-and-drop entre les statuts.",
+    description: "Pilotage visuel des tâches avec glisser-deposer entre les statuts.",
     eyebrow: "Workflow",
+  },
+  "/finance": {
+    title: "Finances",
+    description: "Suivi des revenus, dépenses et niveaux de marge du workspace.",
+    eyebrow: "Performance",
+  },
+  "/settings": {
+    title: "Configuration",
+    description: "Préférences d'affichage et ajustements de l'espace de travail.",
+    eyebrow: "Workspace",
   },
 };

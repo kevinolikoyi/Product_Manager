@@ -1,10 +1,21 @@
 "use client";
 
 import Link from "next/link";
+import { AlertTriangle, LogOut } from "lucide-react";
 import { usePathname } from "next/navigation";
+import { logout } from "@/app/actions/auth";
 import { navigationItems } from "./navigation";
+import { canAccessRoute, hasMinimumRole } from "@/lib/permissions";
+import { Button } from "@/components/ui/Button";
 import { cn } from "@/lib/utils";
-import { useProjects, useTasks } from "@/lib/store";
+import {
+  useAuthenticatedSession,
+  useCurrentMember,
+  useBackendStatus,
+  useMembers,
+  useProjects,
+  useTasks,
+} from "@/lib/store";
 
 interface SidebarProps {
   compactDesktop: boolean;
@@ -18,10 +29,39 @@ export default function Sidebar({
   onClose,
 }: SidebarProps) {
   const pathname = usePathname();
+  const { currentMember, currentRole, currentRoleLabel } = useCurrentMember();
+  const { authenticatedEmail } = useAuthenticatedSession();
+  const backendStatus = useBackendStatus();
+  const { members } = useMembers();
   const { tasks } = useTasks();
   const { projects } = useProjects();
 
-  const mainItems = navigationItems.filter((item) => item.section === "navigation");
+  const mainItems = navigationItems
+    .filter((item) => item.section === "navigation")
+    .filter((item) =>
+      members.length === 0 ? true : canAccessRoute(currentRole, item.href),
+    );
+  const settingsItems = navigationItems
+    .filter((item) => item.section === "settings")
+    .filter((item) =>
+      item.minimumRole ? hasMinimumRole(currentRole, item.minimumRole) : true,
+    );
+
+  const roleTone =
+    currentMember?.role === "owner"
+      ? "border-emerald-400/20 bg-emerald-500/10 text-emerald-200"
+      : currentMember?.role === "manager"
+        ? "border-sky-400/20 bg-sky-500/10 text-sky-200"
+        : "border-amber-400/20 bg-amber-500/10 text-amber-200";
+
+  const initials =
+    currentMember?.name
+      ?.split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((part) => part[0]?.toUpperCase() ?? "")
+      .join("") ??
+    "NA";
 
   return (
     <>
@@ -118,18 +158,18 @@ export default function Sidebar({
             })}
           </div>
 
-          {/*
+          {settingsItems.length > 0 ? (
             <div className="space-y-1.5">
               <p className="px-3 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                Espace
+                Administration
               </p>
-              {secondaryItems.map((item) => {
+              {settingsItems.map((item) => {
                 const Icon = item.icon;
                 const isActive = pathname === item.href;
 
                 return (
                   <Link
-                    key={`${item.href}-${item.label}`}
+                    key={item.label}
                     href={item.href}
                     onClick={onClose}
                     title={compactDesktop ? item.label : undefined}
@@ -158,33 +198,106 @@ export default function Sidebar({
                 );
               })}
             </div>
-          */}
+          ) : null}
+
+          {!backendStatus.loading && members.length > 0 && !currentMember ? (
+            <div className="rounded-[24px] border border-amber-400/20 bg-amber-500/10 p-4 text-sm text-amber-100">
+              <div className="flex items-start gap-3">
+                <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+                <div>
+                  <p className="font-semibold">Compte non rattache</p>
+                  <p className="mt-1 text-amber-100/80">
+                    La session active ne correspond a aucun collaborateur du workspace.
+                    Verifie l&apos;e-mail du compte dans Supabase Auth et dans
+                    `public.collaborators`.
+                  </p>
+                  {authenticatedEmail ? (
+                    <p className="mt-2 break-all text-amber-50">
+                      E-mail detecte : {authenticatedEmail}
+                    </p>
+                  ) : null}
+                </div>
+              </div>
+            </div>
+          ) : null}
         </nav>
-        {/*
+
+        {currentMember ? (
           <div className="border-t border-white/8 p-3">
-            <div className="rounded-3xl bg-white/4 p-3">
+            <div className="rounded-[26px] bg-white/5 p-3">
               <div
                 className={cn(
                   "flex items-center gap-3",
                   compactDesktop && "md:justify-center",
                 )}
               >
-                <div className="grid h-10 w-10 place-items-center rounded-full bg-gradient-to-br from-indigo-500 to-violet-500 text-sm font-semibold text-white">
-                  AM
+                <div className="grid h-11 w-11 place-items-center rounded-full bg-gradient-to-br from-indigo-500 to-violet-500 text-sm font-semibold text-white">
+                  {initials || "NA"}
                 </div>
                 <div className={cn("min-w-0 flex-1", compactDesktop && "md:hidden")}>
                   <p className="truncate text-sm font-medium text-slate-100">
-                    Alice Martin
+                    {currentMember.name}
                   </p>
-                  <p className="text-xs text-slate-400">Responsable operations</p>
+                  {currentRoleLabel ? (
+                    <span
+                      className={cn(
+                        "mt-1 inline-flex rounded-full border px-2.5 py-1 text-[11px] font-semibold",
+                        roleTone,
+                      )}
+                    >
+                      {currentRoleLabel}
+                    </span>
+                  ) : null}
                 </div>
-                <ChevronRight
-                  className={cn("h-4 w-4 text-slate-500", compactDesktop && "md:hidden")}
-                />
               </div>
+
+              <form action={logout} className="mt-3">
+                <Button
+                  type="submit"
+                  variant="ghost"
+                  className={cn(
+                    "h-10 w-full justify-center rounded-2xl border border-white/10 bg-white/5 text-slate-200 hover:bg-white/10 hover:text-white",
+                    compactDesktop && "md:px-0",
+                  )}
+                >
+                  <LogOut className={cn("h-4 w-4", !compactDesktop && "mr-2")} />
+                  <span className={cn(compactDesktop && "md:hidden")}>
+                    Se déconnecter
+                  </span>
+                </Button>
+              </form>
             </div>
           </div>
-        */}
+        ) : !backendStatus.loading ? (
+          <div className="border-t border-white/8 p-3">
+            <div className="rounded-[26px] bg-white/5 p-3">
+              <p className="text-sm font-medium text-slate-100">Session active</p>
+              <p className="mt-1 text-xs text-slate-400">
+                Aucune fiche collaborateur correspondante n&apos;a ete trouvee.
+              </p>
+              {authenticatedEmail ? (
+                <p className="mt-2 break-all text-xs text-slate-300">
+                  E-mail detecte : {authenticatedEmail}
+                </p>
+              ) : null}
+              <form action={logout} className="mt-3">
+                <Button
+                  type="submit"
+                  variant="ghost"
+                  className={cn(
+                    "h-10 w-full justify-center rounded-2xl border border-white/10 bg-white/5 text-slate-200 hover:bg-white/10 hover:text-white",
+                    compactDesktop && "md:px-0",
+                  )}
+                >
+                  <LogOut className={cn("h-4 w-4", !compactDesktop && "mr-2")} />
+                  <span className={cn(compactDesktop && "md:hidden")}>
+                    Se deconnecter
+                  </span>
+                </Button>
+              </form>
+            </div>
+          </div>
+        ) : null}
       </aside>
     </>
   );

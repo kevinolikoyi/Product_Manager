@@ -1,6 +1,7 @@
 'use client';
 
 import {
+  useCallback,
   createContext,
   useContext,
   useEffect,
@@ -9,6 +10,15 @@ import {
   type Dispatch,
   type ReactNode,
 } from 'react';
+import {
+  canManageCollaborators,
+  canManageFinance,
+  canManageProjects,
+  canManageTasks,
+  canViewExecutiveDashboard,
+  getRoleLabel,
+  normalizeWorkspaceRole,
+} from "@/lib/permissions";
 import {
   deleteProjectFromSupabase,
   deleteTaskFromSupabase,
@@ -43,6 +53,8 @@ export interface StoreState {
   finances: Finance[];
   departments: Department[];
   members: Member[];
+  currentMemberId: string | null;
+  authenticatedEmail: string | null;
   preferences: WorkspacePreferences;
   backendStatus: BackendStatus;
 }
@@ -52,15 +64,18 @@ type HydratePreferences = { type: 'HYDRATE_PREFERENCES'; payload: WorkspacePrefe
 type HydrateWorkspace = { type: 'HYDRATE_WORKSPACE'; payload: WorkspaceSnapshot };
 type SetBackendStatus = { type: 'SET_BACKEND_STATUS'; payload: BackendStatus };
 type ResetPreferences = { type: 'RESET_PREFERENCES' };
+type SetCurrentMember = { type: 'SET_CURRENT_MEMBER'; payload: string | null };
 
 type Action =
   | UpdatePreferences
   | HydratePreferences
   | HydrateWorkspace
   | SetBackendStatus
-  | ResetPreferences;
+  | ResetPreferences
+  | SetCurrentMember;
 
 const workspacePreferencesStorageKey = 'collabflow-workspace-preferences-v2';
+const currentMemberStorageKey = 'collabflow-current-member-id-v1';
 
 export const defaultWorkspacePreferences: WorkspacePreferences = {
   density: 'comfortable',
@@ -110,12 +125,23 @@ function sortFinances(finances: Finance[]) {
   return [...finances].sort((left, right) => left.periodStart.localeCompare(right.periodStart));
 }
 
+function resolveDefaultCurrentMemberId(members: Member[]) {
+  return (
+    members.find((member) => member.role === "owner")?.id ??
+    members.find((member) => member.role === "manager")?.id ??
+    members[0]?.id ??
+    null
+  );
+}
+
 const initialState: StoreState = {
   tasks: [],
   projects: [],
   finances: [],
   departments: getDepartmentCatalog(),
   members: [],
+  currentMemberId: null,
+  authenticatedEmail: null,
   preferences: defaultWorkspacePreferences,
   backendStatus: defaultBackendStatus,
 };
@@ -139,12 +165,17 @@ const storeReducer = (state: StoreState, action: Action): StoreState => {
         projects: syncProjectTaskCounts(action.payload.projects, action.payload.tasks),
         finances: sortFinances(action.payload.finances),
         departments: action.payload.departments,
-        members: action.payload.members,
+        members: action.payload.members.map((member) => ({
+          ...member,
+          role: normalizeWorkspaceRole(member.role),
+        })),
       };
     case 'SET_BACKEND_STATUS':
       return { ...state, backendStatus: action.payload };
     case 'RESET_PREFERENCES':
       return { ...state, preferences: defaultWorkspacePreferences };
+    case 'SET_CURRENT_MEMBER':
+      return { ...state, currentMemberId: action.payload };
     default:
       return state;
   }
@@ -185,9 +216,18 @@ function ensureSupabaseMutationAllowed(state: StoreState) {
   }
 }
 
-export const StoreProvider = ({ children }: { children: ReactNode }) => {
+export const StoreProvider = ({
+  children,
+  authenticatedEmail = null,
+  initialCurrentMemberId = null,
+}: {
+  children: ReactNode;
+  authenticatedEmail?: string | null;
+  initialCurrentMemberId?: string | null;
+}) => {
   const [state, dispatch] = useReducer(storeReducer, initialState);
   const [preferencesReady, setPreferencesReady] = useState(false);
+  const normalizedAuthenticatedEmail = authenticatedEmail?.trim().toLowerCase() ?? null;
 
   useEffect(() => {
     try {
@@ -206,6 +246,22 @@ export const StoreProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   useEffect(() => {
+    if (normalizedAuthenticatedEmail) {
+      dispatch({ type: "SET_CURRENT_MEMBER", payload: initialCurrentMemberId });
+      return;
+    }
+
+    try {
+      const storedMemberId = window.localStorage.getItem(currentMemberStorageKey);
+      if (storedMemberId) {
+        dispatch({ type: "SET_CURRENT_MEMBER", payload: storedMemberId });
+      }
+    } catch {
+      window.localStorage.removeItem(currentMemberStorageKey);
+    }
+  }, [initialCurrentMemberId, normalizedAuthenticatedEmail]);
+
+  useEffect(() => {
     if (!preferencesReady) {
       return;
     }
@@ -215,6 +271,58 @@ export const StoreProvider = ({ children }: { children: ReactNode }) => {
       JSON.stringify(state.preferences),
     );
   }, [preferencesReady, state.preferences]);
+
+  useEffect(() => {
+    if (!preferencesReady) {
+      return;
+    }
+
+    if (normalizedAuthenticatedEmail) {
+      return;
+    }
+
+    if (!state.currentMemberId) {
+      window.localStorage.removeItem(currentMemberStorageKey);
+      return;
+    }
+
+    window.localStorage.setItem(currentMemberStorageKey, state.currentMemberId);
+  }, [initialCurrentMemberId, normalizedAuthenticatedEmail, preferencesReady, state.currentMemberId]);
+
+  useEffect(() => {
+    if (state.members.length === 0) {
+      if (state.currentMemberId !== null) {
+        dispatch({ type: "SET_CURRENT_MEMBER", payload: null });
+      }
+      return;
+    }
+
+    if (normalizedAuthenticatedEmail) {
+      const authenticatedMember =
+        state.members.find(
+          (member) => member.email?.trim().toLowerCase() === normalizedAuthenticatedEmail,
+        ) ?? null;
+      const authenticatedMemberId = authenticatedMember?.id ?? null;
+
+      if (state.currentMemberId !== authenticatedMemberId) {
+        dispatch({
+          type: "SET_CURRENT_MEMBER",
+          payload: authenticatedMemberId,
+        });
+      }
+      return;
+    }
+
+    const hasCurrentMember = state.members.some((member) => member.id === state.currentMemberId);
+    if (hasCurrentMember) {
+      return;
+    }
+
+    dispatch({
+      type: "SET_CURRENT_MEMBER",
+      payload: resolveDefaultCurrentMemberId(state.members),
+    });
+  }, [normalizedAuthenticatedEmail, state.currentMemberId, state.members]);
 
   useEffect(() => {
     let cancelled = false;
@@ -270,7 +378,19 @@ export const StoreProvider = ({ children }: { children: ReactNode }) => {
     return null;
   }
 
-  return <StoreContext.Provider value={{ state, dispatch }}>{children}</StoreContext.Provider>;
+  return (
+    <StoreContext.Provider
+      value={{
+        state: {
+          ...state,
+          authenticatedEmail: normalizedAuthenticatedEmail,
+        },
+        dispatch,
+      }}
+    >
+      {children}
+    </StoreContext.Provider>
+  );
 };
 
 export const useStore = () => {
@@ -358,9 +478,57 @@ export const useMembers = () => {
   return { members: state.members };
 };
 
+export const useCurrentMember = () => {
+  const { state, dispatch } = useStore();
+  const currentMember =
+    state.members.find((member) => member.id === state.currentMemberId) ?? null;
+
+  return {
+    currentMember,
+    currentRole: currentMember?.role ?? null,
+    currentRoleLabel: currentMember ? getRoleLabel(currentMember.role) : null,
+    setCurrentMemberId: (memberId: string) =>
+      dispatch({ type: "SET_CURRENT_MEMBER", payload: memberId || null }),
+  };
+};
+
+export const usePermissions = () => {
+  const { currentMember, currentRole, currentRoleLabel } = useCurrentMember();
+
+  return {
+    currentMember,
+    currentRole,
+    currentRoleLabel,
+    canManageCollaborators: canManageCollaborators(currentRole),
+    canManageTasks: canManageTasks(currentRole),
+    canManageProjects: canManageProjects(currentRole),
+    canManageFinance: canManageFinance(currentRole),
+    canViewExecutiveDashboard: canViewExecutiveDashboard(currentRole),
+  };
+};
+
+export const useWorkspaceSync = () => {
+  const { state, dispatch } = useStore();
+
+  const refreshWorkspace = useCallback(async () => {
+    if (state.backendStatus.mode !== "supabase") {
+      return;
+    }
+
+    await syncWorkspaceFromSupabase(dispatch);
+  }, [dispatch, state.backendStatus.mode]);
+
+  return { refreshWorkspace };
+};
+
 export const useWorkspacePreferences = () => {
   const { state, dispatch } = useStore();
   return { preferences: state.preferences, dispatch };
+};
+
+export const useAuthenticatedSession = () => {
+  const { state } = useStore();
+  return { authenticatedEmail: state.authenticatedEmail };
 };
 
 export const useBackendStatus = () => {

@@ -1,3 +1,5 @@
+export type WorkspaceRole = "owner" | "manager" | "collaborator";
+
 export interface Department {
   id: string;
   name: string;
@@ -16,7 +18,7 @@ export interface Member {
   id: string;
   name: string;
   departmentId: string;
-  role: "owner" | "manager" | "member";
+  role: WorkspaceRole;
   email?: string;
 }
 

@@ -1,0 +1,3 @@
+-- Placeholder for a migration version already applied on the linked Supabase project.
+-- The original SQL for this remote migration is not present in this local checkout.
+-- Keep this file so `supabase db push` can compare migration history safely.

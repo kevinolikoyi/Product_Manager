@@ -7,6 +7,7 @@ import { getSupabaseServerClient } from "@/lib/supabase/server";
 export interface AuthenticatedCollaborator {
   id: number;
   workspaceId: number;
+  authUserId: string | null;
   fullName: string;
   email: string | null;
   role: ReturnType<typeof normalizeWorkspaceRole>;
@@ -38,11 +39,11 @@ export const getAuthenticatedCollaborator = cache(async () => {
   ]);
   const config = getSupabasePublicConfig();
 
-  if (!supabase || !config || !user?.email) {
+  if (!supabase || !config || !user) {
     return null;
   }
 
-  const normalizedUserEmail = user.email.trim().toLowerCase();
+  const normalizedUserEmail = user.email?.trim().toLowerCase() ?? null;
 
   const { data: workspace, error: workspaceError } = await supabase
     .from("workspaces")
@@ -54,9 +55,38 @@ export const getAuthenticatedCollaborator = cache(async () => {
     return null;
   }
 
+  const { data: collaboratorByAuthUserId, error: collaboratorByAuthUserIdError } =
+    await supabase
+      .from("collaborators")
+      .select("id, workspace_id, auth_user_id, full_name, email, role")
+      .eq("workspace_id", workspace.id)
+      .eq("auth_user_id", user.id)
+      .maybeSingle();
+
+  if (collaboratorByAuthUserIdError) {
+    return null;
+  }
+
+  const collaborator = collaboratorByAuthUserId ?? null;
+
+  if (collaborator) {
+    return {
+      id: collaborator.id,
+      workspaceId: collaborator.workspace_id,
+      authUserId: collaborator.auth_user_id,
+      fullName: collaborator.full_name,
+      email: collaborator.email,
+      role: normalizeWorkspaceRole(collaborator.role),
+    } satisfies AuthenticatedCollaborator;
+  }
+
+  if (!normalizedUserEmail) {
+    return null;
+  }
+
   const { data: collaborators, error: collaboratorError } = await supabase
     .from("collaborators")
-    .select("id, workspace_id, full_name, email, role")
+    .select("id, workspace_id, auth_user_id, full_name, email, role")
     .eq("workspace_id", workspace.id)
     .order("id", { ascending: true });
 
@@ -64,21 +94,22 @@ export const getAuthenticatedCollaborator = cache(async () => {
     return null;
   }
 
-  const collaborator =
+  const collaboratorByEmail =
     collaborators.find(
       (candidate) => candidate.email?.trim().toLowerCase() === normalizedUserEmail,
     ) ?? null;
 
-  if (!collaborator) {
+  if (!collaboratorByEmail) {
     return null;
   }
 
   return {
-    id: collaborator.id,
-    workspaceId: collaborator.workspace_id,
-    fullName: collaborator.full_name,
-    email: collaborator.email,
-    role: normalizeWorkspaceRole(collaborator.role),
+    id: collaboratorByEmail.id,
+    workspaceId: collaboratorByEmail.workspace_id,
+    authUserId: collaboratorByEmail.auth_user_id,
+    fullName: collaboratorByEmail.full_name,
+    email: collaboratorByEmail.email,
+    role: normalizeWorkspaceRole(collaboratorByEmail.role),
   } satisfies AuthenticatedCollaborator;
 });
 

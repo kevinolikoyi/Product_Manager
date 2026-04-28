@@ -41,3 +41,15 @@ export interface Task {
   risk: "low" | "medium" | "high";
   dueDate: string;
 }
+
+export interface Notification {
+  id: string;
+  type: "task_assigned" | "task_updated" | "comment_added" | "deadline";
+  title: string;
+  body?: string;
+  taskId?: string;
+  actorId?: string;
+  recipientId: string;
+  readAt?: string;
+  createdAt: string;
+}

@@ -24,6 +24,8 @@ import {
   deleteTaskFromSupabase,
   isSupabaseRemoteEnabled,
   loadWorkspaceSnapshot,
+  markAllNotificationsReadInSupabase,
+  markNotificationReadInSupabase,
   saveFinanceToSupabase,
   saveProjectToSupabase,
   saveTaskToSupabase,
@@ -31,7 +33,7 @@ import {
   type WorkspaceSnapshot,
 } from '@/lib/supabase/repository';
 import { getDepartmentCatalog } from '@/lib/departments';
-import type { Department, Finance, Member, Project, Task } from '@/lib/types';
+import type { Department, Finance, Member, Notification, Project, Task } from '@/lib/types';
 
 export interface WorkspacePreferences {
   density: 'comfortable' | 'compact';
@@ -53,6 +55,7 @@ export interface StoreState {
   finances: Finance[];
   departments: Department[];
   members: Member[];
+  notifications: Notification[];
   currentMemberId: string | null;
   authenticatedEmail: string | null;
   preferences: WorkspacePreferences;
@@ -140,6 +143,7 @@ const initialState: StoreState = {
   finances: [],
   departments: getDepartmentCatalog(),
   members: [],
+  notifications: [],
   currentMemberId: null,
   authenticatedEmail: null,
   preferences: defaultWorkspacePreferences,
@@ -165,6 +169,7 @@ const storeReducer = (state: StoreState, action: Action): StoreState => {
         projects: syncProjectTaskCounts(action.payload.projects, action.payload.tasks),
         finances: sortFinances(action.payload.finances),
         departments: action.payload.departments,
+        notifications: action.payload.notifications,
         members: action.payload.members.map((member) => ({
           ...member,
           role: normalizeWorkspaceRole(member.role),
@@ -466,6 +471,31 @@ export const useFinances = () => {
   };
 
   return { finances: state.finances, dispatch, saveFinance };
+};
+
+export const useNotifications = () => {
+  const { state, dispatch } = useStore();
+
+  const unreadCount = state.notifications.filter((notification) => !notification.readAt).length;
+
+  const markAsRead = async (notificationId: string) => {
+    ensureSupabaseMutationAllowed(state);
+    await markNotificationReadInSupabase(notificationId);
+    await syncWorkspaceFromSupabase(dispatch);
+  };
+
+  const markAllAsRead = async () => {
+    ensureSupabaseMutationAllowed(state);
+    await markAllNotificationsReadInSupabase();
+    await syncWorkspaceFromSupabase(dispatch);
+  };
+
+  return {
+    notifications: state.notifications,
+    unreadCount,
+    markAsRead,
+    markAllAsRead,
+  };
 };
 
 export const useDepartments = () => {

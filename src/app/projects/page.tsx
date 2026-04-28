@@ -64,7 +64,11 @@ export default function ProjectsPage() {
     };
   });
 
-  const visiblePortfolio = portfolio.filter(({ project }) =>
+  const visibleTaskProjectIds = new Set(tasks.map((task) => task.projectId));
+  const roleScopedPortfolio = canManageProjects
+    ? portfolio
+    : portfolio.filter(({ project }) => visibleTaskProjectIds.has(project.id));
+  const visiblePortfolio = roleScopedPortfolio.filter(({ project }) =>
     departmentFilter === 'all' ? true : project.departmentId === departmentFilter,
   );
 
@@ -268,29 +272,9 @@ export default function ProjectsPage() {
           </div>
         </section>
 
-        <section
-          className={cn(
-            'grid gap-6',
-            preferences.showInsights
-              ? 'xl:grid-cols-[minmax(0,1.2fr)_minmax(320px,0.8fr)]'
-              : 'grid-cols-1',
-          )}
-        >
-          <div className="grid gap-5 md:grid-cols-2">
-            {filteredPortfolio.map(({ project, openTasks, overdueTasks }) => (
-              <ProjectCard
-                key={project.id}
-                project={project}
-                openTasks={openTasks}
-                overdueTasks={overdueTasks}
-                onEdit={canManageProjects ? handleEdit : undefined}
-                onDelete={canManageProjects ? handleDelete : undefined}
-              />
-            ))}
-          </div>
-
+        <section className="space-y-6">
           {preferences.showInsights ? (
-            <div className="space-y-6">
+            <div className="grid gap-6 xl:grid-cols-2">
               <article className="surface-card rounded-[30px] border border-white/60 p-5">
                 <p className="text-sm font-semibold tracking-[-0.02em] text-slate-950">
                   Focus portefeuille
@@ -385,6 +369,19 @@ export default function ProjectsPage() {
               </article>
             </div>
           ) : null}
+
+          <div className="grid gap-5 md:grid-cols-2">
+            {filteredPortfolio.map(({ project, openTasks, overdueTasks }) => (
+              <ProjectCard
+                key={project.id}
+                project={project}
+                openTasks={openTasks}
+                overdueTasks={overdueTasks}
+                onEdit={canManageProjects ? handleEdit : undefined}
+                onDelete={canManageProjects ? handleDelete : undefined}
+              />
+            ))}
+          </div>
         </section>
 
         {canManageProjects ? (

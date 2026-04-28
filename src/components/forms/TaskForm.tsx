@@ -6,6 +6,7 @@ import {
   useBackendStatus,
   useDepartments,
   useMembers,
+  usePermissions,
   useProjects,
   useTasks,
 } from '@/lib/store';
@@ -26,6 +27,7 @@ export default function TaskForm({ task, onClose, onSuccess }: TaskFormProps) {
   const { departments } = useDepartments();
   const { members } = useMembers();
   const { projects } = useProjects();
+  const { canManageProjects } = usePermissions();
   const otherProjectValue = '__other__';
 
   const [formData, setFormData] = useState({
@@ -65,7 +67,7 @@ export default function TaskForm({ task, onClose, onSuccess }: TaskFormProps) {
       value: project.id,
       label: project.name,
     })),
-    { value: otherProjectValue, label: 'Autre' },
+    ...(canManageProjects ? [{ value: otherProjectValue, label: 'Autre' }] : []),
   ];
   const selectableMembers =
     backendStatus.configured && backendStatus.mode !== 'supabase' ? [] : members;
@@ -216,7 +218,9 @@ export default function TaskForm({ task, onClose, onSuccess }: TaskFormProps) {
           {!effectiveDepartmentId
             ? "Selectionnez d'abord un departement."
             : filteredProjects.length === 0
-              ? "Aucun projet dans ce departement. Choisissez 'Autre' pour en creer un."
+              ? canManageProjects
+                ? "Aucun projet dans ce departement. Choisissez 'Autre' pour en creer un."
+                : 'Aucun projet disponible dans ce departement. Demandez a un manager de creer le projet.'
               : filteredProjects.length === 1
                 ? 'Le projet deja cree pour ce departement a ete selectionne automatiquement.'
                 : `${filteredProjects.length} projet(s) disponible(s) dans ce departement.`}

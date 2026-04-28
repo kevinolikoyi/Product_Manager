@@ -180,6 +180,7 @@ export async function createCollaborator(
 
   const { error: collaboratorError } = await adminClient.from("collaborators").insert({
     workspace_id: workspace.id,
+    auth_user_id: authData.user.id,
     department_id: databaseDepartment.id,
     full_name: fullName,
     email,

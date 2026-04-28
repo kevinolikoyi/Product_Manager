@@ -6,7 +6,7 @@ import {
   remapMemberDepartments,
   remapProjectDepartments,
 } from '@/lib/supabase/departments';
-import type { Department, Finance, Member, Project, Task } from '@/lib/types';
+import type { Department, Finance, Member, Notification, Project, Task } from '@/lib/types';
 
 interface WorkspaceRow {
   id: number;
@@ -23,6 +23,7 @@ interface DepartmentRow {
 interface CollaboratorRow {
   id: number;
   workspace_id: number;
+  auth_user_id: string | null;
   department_id: number | null;
   full_name: string;
   email: string | null;
@@ -64,10 +65,24 @@ interface TaskRow {
   created_by: number | null;
 }
 
+interface NotificationRow {
+  id: number;
+  workspace_id: number;
+  recipient_id: number;
+  actor_id: number | null;
+  task_id: number | null;
+  type: Notification['type'];
+  title: string;
+  body: string | null;
+  read_at: string | null;
+  created_at: string;
+}
+
 interface WorkspaceContext {
   workspace: WorkspaceRow;
   departments: DepartmentRow[];
   collaborators: CollaboratorRow[];
+  currentCollaborator: CollaboratorRow;
 }
 
 export interface WorkspaceSnapshot {
@@ -76,6 +91,7 @@ export interface WorkspaceSnapshot {
   departments: Department[];
   finances: Finance[];
   members: Member[];
+  notifications: Notification[];
   projects: Project[];
   tasks: Task[];
 }
@@ -148,11 +164,28 @@ async function getWorkspaceContext() {
     return null;
   }
 
-  const { data: workspace, error: workspaceError } = await client
-    .from('workspaces')
-    .select('id, name, slug')
-    .eq('slug', config.workspaceSlug)
-    .maybeSingle();
+  const [
+    { data: workspace, error: workspaceError },
+    {
+      data: { user },
+      error: userError,
+    },
+  ] = await Promise.all([
+    client
+      .from('workspaces')
+      .select('id, name, slug')
+      .eq('slug', config.workspaceSlug)
+      .maybeSingle(),
+    client.auth.getUser(),
+  ]);
+
+  if (userError) {
+    throw userError;
+  }
+
+  if (!user) {
+    throw new Error('Session Supabase introuvable.');
+  }
 
   if (workspaceError) {
     throw workspaceError;
@@ -171,7 +204,7 @@ async function getWorkspaceContext() {
         .order('name', { ascending: true }),
       client
         .from('collaborators')
-        .select('id, workspace_id, department_id, full_name, email, role')
+        .select('id, workspace_id, auth_user_id, department_id, full_name, email, role')
         .eq('workspace_id', workspace.id)
         .order('full_name', { ascending: true }),
     ]);
@@ -184,10 +217,28 @@ async function getWorkspaceContext() {
     throw collaboratorsError;
   }
 
+  const collaboratorRows = (collaborators ?? []) as CollaboratorRow[];
+  const normalizedAuthenticatedEmail = user.email?.trim().toLowerCase() ?? null;
+  const currentCollaborator =
+    collaboratorRows.find((collaborator) => collaborator.auth_user_id === user.id) ??
+    collaboratorRows.find(
+      (collaborator) =>
+        normalizedAuthenticatedEmail !== null &&
+        collaborator.email?.trim().toLowerCase() === normalizedAuthenticatedEmail,
+    ) ??
+    null;
+
+  if (!currentCollaborator) {
+    throw new Error(
+      "La session active n'est rattachee a aucun collaborateur du workspace.",
+    );
+  }
+
   return {
     workspace: workspace as WorkspaceRow,
     departments: (departments ?? []) as DepartmentRow[],
-    collaborators: (collaborators ?? []) as CollaboratorRow[],
+    collaborators: collaboratorRows,
+    currentCollaborator,
   } satisfies WorkspaceContext;
 }
 
@@ -249,6 +300,20 @@ function mapTasks(rows: TaskRow[]) {
   })) satisfies Task[];
 }
 
+function mapNotifications(rows: NotificationRow[]) {
+  return rows.map((notification) => ({
+    id: stringifyEntityId(notification.id),
+    type: notification.type,
+    title: notification.title,
+    body: notification.body ?? undefined,
+    taskId: notification.task_id ? stringifyEntityId(notification.task_id) : undefined,
+    actorId: notification.actor_id ? stringifyEntityId(notification.actor_id) : undefined,
+    recipientId: stringifyEntityId(notification.recipient_id),
+    readAt: notification.read_at ?? undefined,
+    createdAt: notification.created_at,
+  })) satisfies Notification[];
+}
+
 async function fetchVisibleProjects(workspaceId: number) {
   const client = requireClient();
   const { data, error } = await client
@@ -301,6 +366,27 @@ async function fetchVisibleTasks(workspaceId: number) {
   return (data ?? []) as TaskRow[];
 }
 
+async function fetchVisibleNotifications(workspaceId: number, recipientId: number) {
+  const client = requireClient();
+  const { data, error } = await client
+    .from('notifications')
+    .select('id, workspace_id, recipient_id, actor_id, task_id, type, title, body, read_at, created_at')
+    .eq('workspace_id', workspaceId)
+    .eq('recipient_id', recipientId)
+    .order('created_at', { ascending: false })
+    .limit(25);
+
+  if (error) {
+    if (isMissingRelationError(error)) {
+      return [];
+    }
+
+    throw error;
+  }
+
+  return (data ?? []) as NotificationRow[];
+}
+
 function resolveProjectDepartmentId(
   context: WorkspaceContext,
   project: Project,
@@ -334,8 +420,8 @@ function resolveProjectDepartmentId(
   );
 }
 
-function resolveDefaultCollaboratorId(context: WorkspaceContext) {
-  return context.collaborators[0]?.id ?? null;
+function requireCurrentCollaboratorId(context: WorkspaceContext) {
+  return context.currentCollaborator.id;
 }
 
 async function fetchProjectRowById(projectId: string) {
@@ -436,7 +522,7 @@ export async function loadWorkspaceSnapshot() {
     return null;
   }
 
-  const [projectRows, financeRows, taskRows] = await Promise.all([
+  const [projectRows, financeRows, taskRows, notificationRows] = await Promise.all([
     resolveSnapshotSection('projects', fetchVisibleProjects(context.workspace.id), [] as ProjectRow[]),
     resolveSnapshotSection(
       'financial_entries',
@@ -444,6 +530,11 @@ export async function loadWorkspaceSnapshot() {
       [] as FinanceRow[],
     ),
     resolveSnapshotSection('tasks', fetchVisibleTasks(context.workspace.id), [] as TaskRow[]),
+    resolveSnapshotSection(
+      'notifications',
+      fetchVisibleNotifications(context.workspace.id, context.currentCollaborator.id),
+      [] as NotificationRow[],
+    ),
   ]);
 
   const normalizedDepartments = normalizeDepartments(context.departments);
@@ -472,6 +563,7 @@ export async function loadWorkspaceSnapshot() {
     departments: normalizedDepartments.departments,
     finances: mapFinances(financeRows),
     members,
+    notifications: mapNotifications(notificationRows),
     projects,
     tasks: mapTasks(taskRows),
   } satisfies WorkspaceSnapshot;
@@ -520,6 +612,7 @@ export async function saveProjectToSupabase(project: Project) {
   const client = requireClient();
   const existingProject = await fetchProjectRowById(project.id);
   const departmentId = resolveProjectDepartmentId(context, project, existingProject);
+  const currentCollaboratorId = requireCurrentCollaboratorId(context);
 
   const payload = {
     workspace_id: context.workspace.id,
@@ -527,7 +620,7 @@ export async function saveProjectToSupabase(project: Project) {
     name: project.name.trim(),
     status: project.status,
     progress: project.progress,
-    created_by: existingProject?.created_by ?? resolveDefaultCollaboratorId(context),
+    created_by: existingProject?.created_by ?? currentCollaboratorId,
   };
 
   const query = existingProject
@@ -599,7 +692,7 @@ export async function saveTaskToSupabase(task: Task) {
   const existingTask = await fetchTaskRowById(task.id);
   const projectId = await resolveProjectIdById(context.workspace.id, task.projectId);
   const assigneeId = parseEntityId(task.assigneeId ?? null);
-  const defaultCollaboratorId = resolveDefaultCollaboratorId(context);
+  const currentCollaboratorId = requireCurrentCollaboratorId(context);
 
   const payload = {
     workspace_id: context.workspace.id,
@@ -611,18 +704,87 @@ export async function saveTaskToSupabase(task: Task) {
     assignee_id: assigneeId,
     assigned_by:
       existingTask?.assignee_id !== assigneeId && assigneeId
-        ? defaultCollaboratorId
-        : existingTask?.assigned_by ?? defaultCollaboratorId,
+        ? currentCollaboratorId
+        : existingTask?.assigned_by ?? currentCollaboratorId,
     due_date: task.dueDate || null,
     position: existingTask?.position ?? 1000,
-    created_by: existingTask?.created_by ?? defaultCollaboratorId,
+    created_by: existingTask?.created_by ?? currentCollaboratorId,
   };
 
   const query = existingTask
-    ? client.from('tasks').update(payload).eq('id', existingTask.id)
-    : client.from('tasks').insert(payload);
+    ? client
+        .from('tasks')
+        .update(payload)
+        .eq('id', existingTask.id)
+        .select('id, workspace_id, project_id, title, status, priority, risk, assignee_id, assigned_by, due_date, position, created_by')
+        .single()
+    : client
+        .from('tasks')
+        .insert(payload)
+        .select('id, workspace_id, project_id, title, status, priority, risk, assignee_id, assigned_by, due_date, position, created_by')
+        .single();
 
-  const { error } = await query;
+  const { data: persistedTask, error } = await query;
+
+  if (error) {
+    throw error;
+  }
+
+  const shouldNotifyAssignee =
+    persistedTask &&
+    assigneeId !== null &&
+    assigneeId !== currentCollaboratorId &&
+    existingTask?.assignee_id !== assigneeId;
+
+  if (shouldNotifyAssignee) {
+    const { error: notificationError } = await client.from('notifications').insert({
+      workspace_id: context.workspace.id,
+      recipient_id: assigneeId,
+      actor_id: currentCollaboratorId,
+      task_id: persistedTask.id,
+      type: 'task_assigned',
+      title: 'Nouvelle tache assignee',
+      body: task.title.trim(),
+    });
+
+    if (notificationError && !isMissingRelationError(notificationError)) {
+      throw notificationError;
+    }
+  }
+}
+
+export async function markNotificationReadInSupabase(notificationId: string) {
+  const parsedNotificationId = parseEntityId(notificationId);
+
+  if (parsedNotificationId === null) {
+    throw new Error(`La notification "${notificationId}" est introuvable.`);
+  }
+
+  const client = requireClient();
+  const { error } = await client
+    .from('notifications')
+    .update({ read_at: new Date().toISOString() })
+    .eq('id', parsedNotificationId);
+
+  if (error) {
+    throw error;
+  }
+}
+
+export async function markAllNotificationsReadInSupabase() {
+  const context = await getWorkspaceContext();
+
+  if (!context) {
+    throw new Error("Supabase n'est pas configure.");
+  }
+
+  const client = requireClient();
+  const { error } = await client
+    .from('notifications')
+    .update({ read_at: new Date().toISOString() })
+    .eq('workspace_id', context.workspace.id)
+    .eq('recipient_id', context.currentCollaborator.id)
+    .is('read_at', null);
 
   if (error) {
     throw error;
@@ -672,10 +834,16 @@ export async function addTaskCommentInSupabase(taskId: string, body: string) {
     throw new Error(`La tache "${taskId}" est introuvable.`);
   }
 
+  const context = await getWorkspaceContext();
+
+  if (!context) {
+    throw new Error("Supabase n'est pas configure.");
+  }
+
   const client = requireClient();
   const { error } = await client.from('task_comments').insert({
     task_id: parsedTaskId,
-    author_id: null,
+    author_id: requireCurrentCollaboratorId(context),
     body: body.trim(),
   });
 

@@ -1,0 +1,153 @@
+{
+  "generatedAt": "2026-04-24T17:00:17.673Z",
+  "dryRun": false,
+  "workspace": {
+    "id": 1,
+    "slug": "as-world-tech",
+    "name": "AS WORLD TECH"
+  },
+  "summary": {
+    "total": 17,
+    "skipped_existing_auth_user": 16,
+    "failed_create_auth_user": 1
+  },
+  "results": [
+    {
+      "collaboratorId": 17,
+      "fullName": "AMOUSSOU Yann",
+      "email": "yann.amoussou@asworld.tech",
+      "role": "member",
+      "department": "Conception logicielle et Design",
+      "status": "skipped_existing_auth_user"
+    },
+    {
+      "collaboratorId": 12,
+      "fullName": "CAPO-CHICHI Franck",
+      "email": "senancapochichi@gmail.com",
+      "role": "member",
+      "department": "Maintenance et Réparation",
+      "status": "skipped_existing_auth_user"
+    },
+    {
+      "collaboratorId": 2,
+      "fullName": "Collaborateur AS WORLD TECH",
+      "email": "member@asworldtech.com",
+      "role": "member",
+      "department": "Conception logicielle et Design",
+      "status": "skipped_existing_auth_user"
+    },
+    {
+      "collaboratorId": 13,
+      "fullName": "GOMEZ Clinton",
+      "email": "obrinegomez@gmail.com",
+      "role": "member",
+      "department": "Maintenance et Réparation",
+      "status": "skipped_existing_auth_user"
+    },
+    {
+      "collaboratorId": 6,
+      "fullName": "HOUENON Dolorès",
+      "email": "dolores.houenon@asworld.tech",
+      "role": "member",
+      "department": "Sécrétariat Administratif",
+      "status": "skipped_existing_auth_user"
+    },
+    {
+      "collaboratorId": 16,
+      "fullName": "HOUESSOU Auré",
+      "email": "ahouessou@asworld.tech",
+      "role": "member",
+      "department": "Maintenance et Réparation",
+      "status": "skipped_existing_auth_user"
+    },
+    {
+      "collaboratorId": 15,
+      "fullName": "HOUETO Elisée",
+      "email": "eliseehoueto@gmail.com",
+      "role": "member",
+      "department": "Conception logicielle et Design",
+      "status": "skipped_existing_auth_user"
+    },
+    {
+      "collaboratorId": 9,
+      "fullName": "LOKONON Loïc",
+      "email": "loÏc.lokonon@asworld.tech",
+      "role": "member",
+      "department": "Service achat, stock / contrôle",
+      "status": "failed_create_auth_user",
+      "error": "Unable to validate email address: invalid format"
+    },
+    {
+      "collaboratorId": 1,
+      "fullName": "Manager AS WORLD TECH",
+      "email": "manager@asworldtech.com",
+      "role": "manager",
+      "department": "Conception logicielle et Design",
+      "status": "skipped_existing_auth_user"
+    },
+    {
+      "collaboratorId": 14,
+      "fullName": "OGOULEYE Isaac",
+      "email": "iogouleye@asworld.tech",
+      "role": "member",
+      "department": "Maintenance et Réparation",
+      "status": "skipped_existing_auth_user"
+    },
+    {
+      "collaboratorId": 5,
+      "fullName": "Owner AS World Tech",
+      "email": "owner@asworldtech.com",
+      "role": "owner",
+      "department": "Conception logicielle et Design",
+      "status": "skipped_existing_auth_user"
+    },
+    {
+      "collaboratorId": 8,
+      "fullName": "Sutra HOUNTONDJI",
+      "email": "sutra.hountondji@asworld.tech",
+      "role": "member",
+      "department": "Sécrétariat Administratif",
+      "status": "skipped_existing_auth_user"
+    },
+    {
+      "collaboratorId": 10,
+      "fullName": "TOHOU Orphée",
+      "email": "orphee.tohou@asworld.tech",
+      "role": "member",
+      "department": "Conception logicielle et Design",
+      "status": "skipped_existing_auth_user"
+    },
+    {
+      "collaboratorId": 7,
+      "fullName": "TOHOUEDE Kirielle",
+      "email": "touhouedekirielle@gmail.com",
+      "role": "member",
+      "department": "Ressource Humaine",
+      "status": "skipped_existing_auth_user"
+    },
+    {
+      "collaboratorId": 11,
+      "fullName": "TOKPLO Bryan",
+      "email": "bryan.tokplo@asworld.tech",
+      "role": "member",
+      "department": "Commercial",
+      "status": "skipped_existing_auth_user"
+    },
+    {
+      "collaboratorId": 18,
+      "fullName": "YANSUNNU Castus",
+      "email": "castusyansunnu90@gmail.com",
+      "role": "member",
+      "department": "Conception logicielle et Design",
+      "status": "skipped_existing_auth_user"
+    },
+    {
+      "collaboratorId": 19,
+      "fullName": "YEHOUENOU Rose A.",
+      "email": "rosearielle04@gmail.com",
+      "role": "member",
+      "department": "Maintenance et Réparation",
+      "status": "skipped_existing_auth_user"
+    }
+  ]
+}
